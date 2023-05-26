@@ -1,0 +1,1 @@
+# stripe-openai-socket-generation
