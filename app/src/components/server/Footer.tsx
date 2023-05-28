@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const Footer = () => {
     return (
-        <footer className="w-full p-10 md:px-20 bg-stone-950">
+        <footer className="w-full p-10 pb-20 md:px-20 bg-stone-950">
             <h1 className="mb-6 text-5xl font-poppins font-semibold text-stone-500">Petmatcher</h1>
             <nav className="flex flex-col md:flex-row px-4 font-barlow text-stone-600">
                 <ul className="mr-10 md:mr-20 text-lg mb-6">

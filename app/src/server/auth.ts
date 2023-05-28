@@ -5,9 +5,11 @@ import {
   type DefaultSession,
 } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { env } from "@/env.mjs";
 import { prisma } from "@/server/db";
+import { randomBytes, randomUUID } from "crypto";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -19,6 +21,7 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      token: string;
       // ...other properties
       // role: UserRole;
     } & DefaultSession["user"];
@@ -37,19 +40,40 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
+    session: (data) => {
+      const { session, token, user } = data
+      console.log(data)
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: user.id,
+          token: "yo"
+        },
+      }
+    },
+    // we can use callbacks here for different situations like on sign in, token revalidation etc, but not entirely necessary in our case yet
+    // "This callback is called whenever a JSON Web Token is created (i.e. at sign in) or updated (i.e whenever a session is accessed in the client)."
+    // "Use an if branch to check for the existence of parameters (apart from token). If they exist, this means that the callback is being invoked for the first time (i.e. the user is being signed in)."
+    jwt: (data) => ({
+      ...data,
+      
     }),
+  },
+  session: {
+    generateSessionToken: () => {
+        return randomUUID?.() ?? randomBytes(32).toString("hex");
+    }
   },
   adapter: PrismaAdapter(prisma),
   providers: [
     DiscordProvider({
       clientId: env.DISCORD_CLIENT_ID,
       clientSecret: env.DISCORD_CLIENT_SECRET,
+    }),
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     }),
     /**
      * ...add more providers here.

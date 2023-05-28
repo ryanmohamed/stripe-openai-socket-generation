@@ -6,6 +6,7 @@ import { api } from "@/utils/api";
 
 import NavLayout from "@/components/NavLayout"
 import "@/styles/globals.css";
+import { SocketProvider } from "@/context/SocketContext"
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -13,9 +14,11 @@ const MyApp: AppType<{ session: Session | null }> = ({
 }) => {
   return (
     <SessionProvider session={session}>
-      <NavLayout>
-        <Component {...pageProps} />
-      </NavLayout>
+    <SocketProvider>
+        <NavLayout>
+            <Component {...pageProps} />
+        </NavLayout>
+    </SocketProvider>
     </SessionProvider>
   );
 };

@@ -83,3 +83,46 @@ yarn-error.log*
 
 # typescript
 /app/*.tsbuildinfo
+
+
+
+# dependencies
+/server/node_modules
+/server/.pnp
+/server/.pnp.js
+
+# testing
+/server/coverage
+
+# database
+/server/prisma/db.sqlite
+/server/prisma/db.sqlite-journal
+
+# next.js
+/server/.next/
+/server/out/
+/server/next-env.d.ts
+
+# production
+/server/build
+
+# misc
+/server/.DS_Store
+/server/*.pem
+
+# debug
+/server/npm-debug.log*
+/server/yarn-debug.log*
+/server/yarn-error.log*
+/server/.pnpm-debug.log*
+
+# local env files
+# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+/server/.env
+/server/.env*.local
+
+# vercel
+/server/.vercel
+
+# typescript
+/server/*.tsbuildinfo
