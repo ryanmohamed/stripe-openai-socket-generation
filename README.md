@@ -1,7 +1,7 @@
 # Stripe OpenAI Sockets with T3 stack, Express and PostgreSQL
 
-# Problem 1 - (Branch: socket-connection)
 ## Validating connections to the socket server
+**See branch `socket-connection`**
 Some key points to keep in mind:
 1. `next-auth` allows authentication with many different providers
 2. `next-auth` supports different **session** strategies (e.g. "jwt" | "database)
