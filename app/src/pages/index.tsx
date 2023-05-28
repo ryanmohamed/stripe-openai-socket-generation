@@ -9,6 +9,10 @@ import ActiveUsers from "@/components/server/ActiveUsers";
 import Pricing from "@/components/server/Pricing";
 import Footer from "@/components/server/Footer";
 
+import { useContext } from "react";
+import { SocketContext } from "@/context/SocketContext";
+import Button from "@/components/Button";
+
 const AuthContainer = () => {
   const hello = api.example.hello.useQuery({ text: "from tRPC" });
   
@@ -23,6 +27,11 @@ const AuthContainer = () => {
 }
 
 const Home: NextPage = () => {
+
+  const { socket } = useContext(SocketContext);
+  const { data: session } = useSession();
+  const user = session?.user
+  console.log(session)
   return (
     <>
       <Head>
@@ -31,9 +40,9 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       
-      <main className="flex-grow min-h-full w-full bg-red-200 bg-gradient-to-b from-[#000000] to-[#15162c]">
-        <AuthContainer />
+      <main className="page">
         <Landing />
+        <Button />
         <div className="w-full mt-8 md:mt-2 px-10 flex-col md:flex-row-reverse centered">
           <h3 className="text-white text-center font-barlow m-6">Other users waiting to generate!</h3>
           <ActiveUsers users={[

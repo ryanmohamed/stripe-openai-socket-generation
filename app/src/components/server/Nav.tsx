@@ -1,29 +1,35 @@
 import Link from "next/link";
-
-const NavLink = ({href, text, extraStyles}: 
-{   
-    href: string, 
-    text: string,
-    extraStyles?: string
-}) => 
-(
-    <li>
-        <Link href={href}><p className={`antialiased hover:subpixel-antialiased font-poppins font-normal text-white m-2 ${extraStyles}`}>{text}</p></Link>
-    </li>
-)
+import NavLinks from "./NavLinks"
+import useSocketContext from "@/hooks/useSocketContext";
+import { useState } from "react";
 
 const Nav = () => { 
+    const { socket } = useSocketContext();
+    const [ connected, setConnected ] = useState<string>("not_connected");
+    socket?.on("connect", () => setConnected("connected"));
+    socket?.on("connect_error", () => setConnected("connection_error"));
+    socket?.on("disconnect", () => setConnected("not_connected"));
     return (
-        <nav className="w-full h-12 px-2 flex justify-between items-center bg-black">
+        <nav className="w-full h-12 px-10 md:px-20 flex justify-between items-center bg-black">
             <div>
-                <ul className="list-none"><NavLink href="/" text="Home" extraStyles="font-bold" /></ul>
+                <ul className="flex items-center list-none">
+                    <li>
+                        <Link href="/"><p className={`antialiased hover:subpixel-antialiased font-poppins text-white m-2 font-bold`}>Home</p></Link>
+                    </li>
+                    <li 
+                        className={`rounded-full ml-4 px-2 w-fit h-full border-2 
+                            ${ connected === "connected" ? "border-green-600 text-green-600" : 
+                                connected === "not_connected" ? "border-red-600 text-red-600" :
+                                    "border-orange-600 text-orange-600" 
+                            }`}
+                        >
+                        { connected === "connected" ? "Connected" :
+                            connected === "not_connected" ? "Disconnected" :
+                                "Connection Error" }
+                    </li>
+                </ul>
             </div>
-            <ul className="h-full centered list-none">
-                <NavLink href="/explore" text="Explore" />
-                <NavLink href="/join" text="Join" />
-                <NavLink href="/create" text="Create" />
-                <NavLink href="/feed" text="My Feed" />
-            </ul>
+            <NavLinks />
         </nav>
     );
 }

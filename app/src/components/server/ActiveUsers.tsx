@@ -1,4 +1,4 @@
-const Contributor = ({src, name}: 
+const Contributor = ({src, name, ...props}: 
     {
         src: string,
         name: string
@@ -28,8 +28,8 @@ const ActiveUsers = ({ users, children }:
                 <span className="text-green-500 glow-lg text-2xl mx-2">{users.length}</span> Active User{users.length>1&&"s"}
             </p>
             <div className="flex flex-wrap items-center">
-                { users && users.slice(0,4).map(user => (
-                    <Contributor src={user.img_url} name={user.display_name} />
+                { users && users.slice(0,4).map((user, key) => (
+                    <Contributor src={user.img_url} name={user.display_name} key={key} />
                 )) }
                 <div className="mr-2 w-fit py-1 pl-3 pr-6 my-2 rounded-full flex items-center text-white font-barlow bg-stone-950 border-2 border-stone-800">
                 <span className="text-sm md:text-md ml-4 whitespace-nowrap subpixel-antialiased"> ... </span>
