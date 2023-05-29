@@ -42,7 +42,6 @@ const Home: NextPage = () => {
       
       <main className="page">
         <Landing />
-        <Button />
         <div className="w-full mt-8 md:mt-2 px-10 flex-col md:flex-row-reverse centered">
           <h3 className="text-white text-center font-barlow m-6">Other users waiting to generate!</h3>
           <ActiveUsers users={[
