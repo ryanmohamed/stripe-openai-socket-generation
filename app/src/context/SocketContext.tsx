@@ -11,9 +11,14 @@ interface ServerToClientEvents {
     basicEmit: (a: number, b: string, c: Buffer) => void;
     withAck: (d: string, callback: (e: number) => void) => void;
 }
+
+type ConnectionCount = {
+    count: number;
+    status: string;
+}
   
 interface ClientToServerEvents {
-    hello: () => void;
+    'get:connection-count': (connectionCountResponse: any, foo: any) => void;
 }
 
 interface InterServerEvents {
@@ -26,10 +31,14 @@ interface SocketData {
 }
 
 type SocketType = Socket<ServerToClientEvents, ClientToServerEvents>;
-type SocketContextType = { socket: Socket<ServerToClientEvents, ClientToServerEvents> | null };
+type SocketContextType = { 
+    socket: Socket<ServerToClientEvents, ClientToServerEvents> | null, 
+    disconnect: null | CallableFunction  
+    connect: null | CallableFunction
+};
 
 // code meant to be ran on client machine (hence use effect, etc)
-export const SocketContext = createContext<SocketContextType>({ socket: null });
+export const SocketContext = createContext<SocketContextType>({ socket: null, disconnect: null, connect: null });
 export const SocketProvider = ({children}: {
     children?: React.ReactNode;
 }) => 
@@ -43,19 +52,23 @@ export const SocketProvider = ({children}: {
         setSocket(null);
         setHasConnected(false);
     }
+
+    const connect = () => { 
+        if(session?.user){
+            setSocket(io(URL, {
+                autoConnect: true,
+                withCredentials: true,
+                auth: { data: session }
+            }) as Socket<ServerToClientEvents, ClientToServerEvents>);
+            setHasConnected(true);
+        }
+    }
     
     useEffect(() => {
         const user = session?.user
         // if no connection and signed in - establish socket
         if(!hasConnected){
-            if(user){
-                setSocket(io(URL, {
-                    autoConnect: true,
-                    withCredentials: true,
-                    auth: { data: session }
-                }) as Socket<ServerToClientEvents, ClientToServerEvents>);
-                setHasConnected(true);
-            }
+            connect();
         }
         // if socket exists but no user - disconnect
         else if (!user && socket) {
@@ -68,7 +81,7 @@ export const SocketProvider = ({children}: {
     }, [session]);
 
     return (
-        <SocketContext.Provider value={{ socket }}>
+        <SocketContext.Provider value={{ socket, disconnect, connect }}>
             {children}
         </SocketContext.Provider>
     );

@@ -14,3 +14,12 @@ To stick with conventions, keep the isolations of full-stack web app and externa
 2. `Session` created in database with `userId` and `expires` timestamp
 3. Client side request to Socket-Server
 4. Socket-Server middleware validates requesting `User`'s `Session`
+
+### Todo:
+Implemented context for requesting and listening to pool conneciton count via acknowledgements. 
+
+Uses our preexisting channel which requires authentication.
+
+Connection isn't protected, so we should implement 2 namespaces. A public channel with no middleware, and an authenticated channel with our previously added session token method. 
+
+Isolates public and protected socket information and allows realtime data flow for any client. 

@@ -16,6 +16,8 @@ const io = new Server(server, {
     }
 });
 
+import { getRoomCount } from "./utilities.mjs"
+
 // middleware to validate incoming session token cookie against values in database
 io.use((socket, next) => {
     console.log(`Socket ${socket.id} attempting to connect...`)
@@ -49,13 +51,47 @@ io.use((socket, next) => {
     })
 });
 
+// room events
+io.of("/").adapter.on("create-room", (room) => {
+
+});
+io.of("/").adapter.on("delete-room", (room) => {
+
+});
+
+io.of("/").adapter.on("join-room", (room, id) => {
+    const pool = () => {
+        io.to("pool").emit("connection-count", getRoomCount(io, room));
+    }
+    const thing =  [
+        [ "pool", pool ]
+    ];
+    const map = new Map(thing);
+    const fn = map.get(room);
+    fn && fn();
+});
+
+io.of("/").adapter.on("leave-room", (room, id) => {
+
+});
+
 io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} has succesfully connected!`)
+    console.log(`Placing ${socket.id} into general pool...`)
+    socket.join("pool");
+
+    socket.on("get:connection-count", (foo, callback) => {
+        console.log("Requested connection count.");
+        callback({
+            count: getRoomCount(io, 'pool'),
+            status: "ok"
+        });
+    });
+
 
     socket.on('disconnect', () => {
         console.log(`User ${socket.id} has disconnected...`)
     });
-
 });
 
 server.listen(port, () => console.log(`Listening on ${port}...`));
