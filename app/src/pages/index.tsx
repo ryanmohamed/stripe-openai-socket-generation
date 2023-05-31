@@ -28,10 +28,6 @@ const AuthContainer = () => {
 
 const Home: NextPage = () => {
 
-  const { socket } = useContext(SocketContext);
-  const { data: session } = useSession();
-  const user = session?.user
-  console.log(session)
   return (
     <>
       <Head>

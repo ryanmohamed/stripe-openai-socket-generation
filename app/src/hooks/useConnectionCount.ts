@@ -1,29 +1,35 @@
+import { resolve } from "path";
 import { useEffect, useState } from "react";
 import useSocketContext from "./useSocketContext";
-export default function useConnectionCount () {
-    const { socket } = useSocketContext();
-    const [ count, setCount ] = useState<number>(0);
-    const [ registered, setRegistered ] = useState<boolean>(false);
-    useEffect(() => {
-        if (socket) {
-            socket.emit("get:connection-count", {}, (response: any) => {
-                setCount(response.count);
-            });
-        } 
-        return () => {
-            setRegistered(false);
-        }
-    }, []);
-    useEffect(() => {
-        if (!socket) setRegistered(false);
-        if (!registered) {
-            if (socket) {
-                socket.on("connection-count" as any, (c: number) => {
-                    setCount(c);
-                })
-                setRegistered(true);
-            }
-        }
-    }, [socket]);
-    return { count };
-};
+
+export default function useConnectionCount() {
+  const { socket } = useSocketContext();
+  const [count, setCount] = useState<number>(0);
+
+  useEffect(() => {
+
+    const handleConnectionCount = (response: any) => {
+      setCount(response.count as number);
+    };
+
+    if (socket) {
+      // handle updates
+      socket.on("connection-count", handleConnectionCount);
+
+      // ask for count, will be cached and emitted once the socket reconnects
+      socket.emitWithAck("get:connection-count", (response: any) => {})
+      .then((response) => {
+          console.log("ack:", response);
+          setCount(response.count as number);
+      });
+
+      // clean up
+      return () => {
+        socket.off("connection-count", handleConnectionCount);
+      };
+    }
+
+  }, [socket]);
+
+  return { count };
+}
