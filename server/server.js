@@ -16,53 +16,20 @@ const io = new Server(server, {
     }
 });
 
-import { getConnectionCount, getRoomCount } from "./utilities.mjs"
+import { coreServices, emitConnectionCount } from "./utilities.mjs"
 
-const publicNamespace = io.of('/');
-const authenticatedNamespace = io.of('/authenticated');
-
-// publicNamespace.adapter.on("create-room", (room) => {
-//     const pool = () => {
-//         publicNamespace.emit("connection-count", getConnectionCount([publicNamespace, authenticatedNamespace]));
-//     }
-//     const thing =  [
-//         [ "pool", pool ]
-//     ];
-//     const map = new Map(thing);
-//     const fn = map.get(room);
-//     fn && fn();
-// });
+const pnsp = io.of('/');
+const ansp = io.of('/authenticated');
 
 // public namespace only responsible for read only information for all clients 
-publicNamespace.on("connection", (socket) => {
-    const emitConnectionCount = () => {
-        getConnectionCount([publicNamespace, authenticatedNamespace])
-        .then((count) => {
-            console.log("Sending updated connection count...");
-            publicNamespace.emit("connection-count", {
-                count: count,
-                status: "ok"
-            });
-        }) 
-    }
-
+pnsp.on("connection", (socket) => {
+    const emitTotalConnections = () => emitConnectionCount([pnsp, ansp], pnsp);
+    coreServices(emitTotalConnections, socket);
     console.log(`New public connection: ${socket.id}!\n`);
-    emitConnectionCount();
-    
-    // response to client emitWithAck
-    socket.on("get:connection-count", (foo, callback) => {
-        console.log("Sending requested connection count...");
-        emitConnectionCount();
-    });
-    
-    socket.on("disconnect", () => {
-        console.log(`Public connection disconnected: ${socket.id}!`);
-        emitConnectionCount();
-    });
 });
 
 // middleware to validate incoming session token cookie against values in database
-authenticatedNamespace.use((socket, next) => {
+ansp.use((socket, next) => {
     console.log(`Socket ${socket.id} attempting to connect to authenticated namespace...`)
     // full-stack app appends cookies to client requests
     const cookies = socket.request.headers?.cookie?.split('; ');
@@ -94,34 +61,12 @@ authenticatedNamespace.use((socket, next) => {
     })
 });
 
-authenticatedNamespace.on('connection', (socket) => {
-
-    const emitConnectionCount = () => {
-        getConnectionCount([publicNamespace, authenticatedNamespace])
-        .then((count) => {
-            console.log("Sending updated connection count...");
-            authenticatedNamespace.emit("connection-count", {
-                count: count,
-                status: "ok"
-            });
-        }) 
-    }
-
+ansp.on('connection', (socket) => {
+    const emitTotalConnections = () => emitConnectionCount([pnsp, ansp], ansp);
+    coreServices(emitTotalConnections, socket);
     console.log(`\nNew private connection: ${socket.id}!`);
     console.log(`Placing ${socket.id} into general pool...`)
     socket.join("pool");
-    emitConnectionCount();
-    
-    // response to client emitWithAck
-    socket.on("get:connection-count", (foo, callback) => {
-        console.log("Sending requested connection count...");
-        emitConnectionCount();
-    });
-    
-    socket.on("disconnect", () => {
-        console.log(`Public connection disconnected: ${socket.id}!`);
-        emitConnectionCount();
-    });
 });
 
 server.listen(port, () => console.log(`Listening on ${port}...`));

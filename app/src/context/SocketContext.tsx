@@ -6,13 +6,22 @@ import { io, Socket } from 'socket.io-client';
 const publicURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http://localhost:3001/';
 const privateURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http://localhost:3001/authenticated';
 
+type AckType = {
+    status: "ok" | "error";
+    data: ConnectedUserType[] | any;
+}
+
+type ConnectedUserType = {
+    name: string;
+    image: string;
+}
 
 // "Types for the client"
 interface ServerToClientEvents {
     noArg: () => void;
     basicEmit: (a: number, b: string, c: Buffer) => void;
     withAck: (d: string, callback: (e: number) => void) => void;
-    "connection-count": (count: number) => void;
+    "connection-count": (ack: AckType) => void;
 }
 
 type ConnectionCount = {
@@ -21,7 +30,7 @@ type ConnectionCount = {
 }
   
 interface ClientToServerEvents {
-    'get:connection-count': (foo: any, response: any) => void;
+    'get:connection-count': (foo: any, users: AckType) => void;
 }
 
 interface InterServerEvents {

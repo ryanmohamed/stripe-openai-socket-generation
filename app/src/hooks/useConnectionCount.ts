@@ -2,14 +2,22 @@ import { resolve } from "path";
 import { useEffect, useState } from "react";
 import useSocketContext from "./useSocketContext";
 
+type ConnectedUserType = {
+  name: string;
+  image: string;
+}
+
 export default function useConnectionCount() {
   const { socket } = useSocketContext();
-  const [count, setCount] = useState<number>(0);
+  const [ count, setCount ] = useState<number>(0);
+  const [ users, setUsers ] = useState<ConnectedUserType[] | null>(null);
 
   useEffect(() => {
 
-    const handleConnectionCount = (response: any) => {
-      setCount(response.count as number);
+    const handleConnectionCount = ({ data }: { data: ConnectedUserType[]}) => {
+      console.log(data)
+      setCount(data?.length || 0);
+      setUsers(data);
     };
 
     if (socket) {
@@ -17,10 +25,11 @@ export default function useConnectionCount() {
       socket.on("connection-count", handleConnectionCount);
 
       // ask for count, will be cached and emitted once the socket reconnects
-      socket.emitWithAck("get:connection-count", (response: any) => {})
-      .then((response) => {
-          console.log("ack:", response);
-          setCount(response.count as number);
+      socket.emitWithAck("get:connection-count", (users: ConnectedUserType[]) => {})
+      .then((users) => {
+          console.log("ack:", users);
+          setCount(users.length || 0);
+          setUsers(users);
       });
 
       // clean up
@@ -31,5 +40,5 @@ export default function useConnectionCount() {
 
   }, [socket]);
 
-  return { count };
+  return { count, users };
 }
