@@ -23,3 +23,13 @@ Uses our preexisting channel which requires authentication.
 Connection isn't protected, so we should implement 2 namespaces. A public channel with no middleware, and an authenticated channel with our previously added session token method. 
 
 Isolates public and protected socket information and allows realtime data flow for any client. 
+
+## Logs 
+1. Public and private namespaces added to socket server
+2. Refactored client connection to connect to and disconnect from the appropriate namespace.
+3. Refactored context to cleanly apply and remove listers for socket events
+4. Implemented use of useConnectionCount hook
+
+### Todo:
+1. Implement same functionality for pool connections (private connections)
+2. Implement token functionality, add to middleware checks performed by socket server
