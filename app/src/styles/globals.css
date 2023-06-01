@@ -36,7 +36,7 @@
       @apply bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded;
     }
     .nav-link-txt {
-      @apply hidden md:block antialiased hover:subpixel-antialiased font-poppins font-normal text-white m-2;
+      @apply hidden md:block whitespace-nowrap antialiased hover:subpixel-antialiased font-poppins font-normal text-white m-2;
     }
     .price-tile {
       @apply border-[1px] w-64 min-h-[16rem] md:w-72 md:min-h-[18rem] p-4 bg-zinc-950 bg-gradient-to-r from-black to-stone-950 rounded-xl flex flex-col items-center justify-between;

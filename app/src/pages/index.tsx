@@ -40,24 +40,7 @@ const Home: NextPage = () => {
         <Landing />
         <div className="w-full mt-8 md:mt-2 px-10 flex-col md:flex-row-reverse centered">
           <h3 className="text-white text-center font-barlow m-6">Other users waiting to generate!</h3>
-          <ActiveUsers users={[
-            {
-              img_url: 'http://placeholder.io',
-              display_name: 'Person 1'
-            },
-            {
-              img_url: 'http://placeholder.io',
-              display_name: 'Person 2'
-            },
-            {
-              img_url: 'http://placeholder.io',
-              display_name: 'Person 3'
-            },
-            {
-              img_url: 'http://placeholder.io',
-              display_name: 'Ryan Mohamed'
-            },
-          ]} />
+          <ActiveUsers  />
         </div>
         <Pricing />
         <div>

@@ -8,14 +8,6 @@ import {
 
 import { DefaultUser } from "next-auth"
 
-type thing = ({
-    id: string;
-} & {
-    name?: string | null | undefined;
-    email?: string | null | undefined;
-    image?: string | null | undefined;
-}) | undefined
-
 const BaseUser = z.object({ id: z.string() })
 const AdditionalUser = z.object({ 
     name: z.string().optional().nullable(), 
