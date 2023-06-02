@@ -46,6 +46,16 @@ export const emitConnectionCount = (namespaces, emittingNamespace) => {
     }) 
 }
 
+/*
+    room: string
+    emittingNamespace: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+*/
+export const handlePoolUpdate = (room, nsp) => {
+    const rooms = nsp.adapter.rooms;  //Map<Room, Set<SocketId>>
+    const count = rooms["pool"]?.size || 0;
+    nsp.to("pool").emit("pool-count", count)
+}
+
 /* 
     Core services found in both the public and authenticated namespaces
     namespace: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>

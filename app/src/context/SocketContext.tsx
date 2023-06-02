@@ -8,7 +8,7 @@ const privateURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http:/
 
 type AckType = {
     status: "ok" | "error";
-    data: ConnectedUserType[] | any;
+    data: ConnectedUserType[] | CountType | any;
 }
 
 type ConnectedUserType = {
@@ -16,12 +16,15 @@ type ConnectedUserType = {
     image: string;
 }
 
+type CountType = number;
+
 // "Types for the client"
 interface ServerToClientEvents {
     noArg: () => void;
     basicEmit: (a: number, b: string, c: Buffer) => void;
     withAck: (d: string, callback: (e: number) => void) => void;
     "connection-count": (ack: AckType) => void;
+    "pool-count": (ack: AckType) => void
 }
 
 type ConnectionCount = {
@@ -31,6 +34,7 @@ type ConnectionCount = {
   
 interface ClientToServerEvents {
     'get:connection-count': (foo: any, users: AckType) => void;
+    'get:pool-count': (foo: any, users: AckType) => void;
 }
 
 interface InterServerEvents {

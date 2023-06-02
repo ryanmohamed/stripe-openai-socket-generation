@@ -15,8 +15,8 @@ const Nav = () => {
         <div className="absolute md:relative">
             <ul className="md:nav nav-mobile">
                 <NavLink href="/explore" svg={<Explore fill="#fafaf9" className="transition shadow-white hover:fill-purple-600" />} text="Explore"></NavLink>
-                <NavLink href="/join" svg={<Join fill="#fafaf9" className="transition hover:fill-purple-600" />} text="Join" />
-                <NavLink href="/create" svg={<Create fill="#fafaf9" className="transition hover:fill-purple-600" />} text="Create" />
+                { session && <NavLink href="/join" svg={<Join fill="#fafaf9" className="transition hover:fill-purple-600" />} text="Join" /> }
+                { session && <NavLink href="/create" svg={<Create fill="#fafaf9" className="transition hover:fill-purple-600" />} text="Create" /> }
                 { session && <NavLink href={`/account/${session.user.id}`} svg={<Feed fill="#fafaf9" className="transition hover:fill-purple-600" />} text="My Profile" />}
                 <NavAuth />
             </ul>

@@ -3,7 +3,7 @@ import { api } from "@/utils/api";
 const TokenCount = () => {
     const query = api.controller.getBalance.useQuery();
     return (
-        <div className="flex items-center rounded-full px-3 border-2 border-stone-500 bg-stone-950">
+        <div className="flex items-center rounded-full mx-4">
             <span className="text-stone-500 font-bold h-full mr-4">Tokens</span>
             <div className="centered">
                 <span className="text-stone-500 font-bold mr-1">{query.data?.balance || 0}</span>

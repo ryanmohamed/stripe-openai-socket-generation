@@ -16,7 +16,7 @@ const io = new Server(server, {
     }
 });
 
-import { coreServices, emitConnectionCount } from "./utilities.mjs"
+import { coreServices, emitConnectionCount, handlePoolUpdate } from "./utilities.mjs"
 
 const pnsp = io.of('/');
 const ansp = io.of('/authenticated');
@@ -67,6 +67,33 @@ ansp.on('connection', (socket) => {
     console.log(`\nNew private connection: ${socket.id}!`);
     console.log(`Placing ${socket.id} into general pool...`)
     socket.join("pool");
+
+
+    // response to client emitWithAck
+    socket.on("get:pool-count", (foo, callback) => {
+        console.log("Sending requested pool count...");
+        const count = ansp.adapter.rooms.get("pool").size;
+        ansp.to(socket.id).emit("pool-count", {
+            data: count,
+            status: "ok"
+        }); // emit to requester
+    });
+});
+
+ansp.adapter.on("create-room", (room) => {
+    console.log(`room ${room} was created`);
+});
+
+ansp.adapter.on("delete-room", (room) => {
+    console.log(`room ${room} was created`);
+});
+
+ansp.adapter.on("join-room", (room, id) => {
+    room === "pool" && handlePoolUpdate(room, ansp);
+});
+
+ansp.adapter.on("leave-room", (room, id) => {
+    room === "pool" && handlePoolUpdate(room, ansp);
 });
 
 server.listen(port, () => console.log(`Listening on ${port}...`));
