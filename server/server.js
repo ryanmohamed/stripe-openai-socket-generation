@@ -129,6 +129,31 @@ ansp.on('connection', (socket) => {
         }
     });
 
+    // response to client emitWithAck
+    socket.on("action:leave-room", (roomID) => {
+        const rooms = ansp.adapter.rooms;
+        // if recieved non string or non 6 digit string
+        const notValidID = typeof roomID !== "string" || !roomID.match(/^\d{6}$/);
+        const doesNotExist = rooms.get(roomID) === undefined || rooms.get(roomID) === null
+        const doesNotIncludeClient = !rooms?.get(roomID)?.has(socket.id);
+        
+        if (notValidID || doesNotExist || doesNotIncludeClient) {
+            ansp.to(socket.id).emit("ack:left-room", {
+                data: null,
+                status: "error"
+            });
+        }
+        
+        // remove socket
+        else {  
+            socket.leave(roomID); // leave-room called as side-effect
+            ansp.to(socket.id).emit("ack:left-room", {
+                data: null,
+                status: "ok"
+            });
+        }
+    });
+
 });
 
 ansp.adapter.on("create-room", (room) => {
@@ -145,6 +170,7 @@ ansp.adapter.on("join-room", (room, id) => {
 
 ansp.adapter.on("leave-room", (room, id) => {
     room === "pool" && handlePoolUpdate(room, ansp);
+    console.log(`${id} left room ${room}`);
 });
 
 server.listen(port, () => console.log(`Listening on ${port}...`));

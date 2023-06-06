@@ -32,7 +32,7 @@ const Page = ({
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="page">
+      <main className="page p-8">
         <ProfileHeader user={user}/>
       </main>
     </>

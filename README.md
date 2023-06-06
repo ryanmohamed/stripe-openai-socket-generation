@@ -61,3 +61,9 @@ Reasons for this are as follows:
 3. Create JoinLink component displaying users in a room and a button to join it
 4. Add server logic to ack the information about the users in client's current room
 5. Add server logic to ack information about atleast 10 rooms (leave room for pagination)
+
+## Logs
+- [x] Add persistence to client component `CreateRoom`, when the user changes routes, the room is still created but the component remounts itself to it's original state, allowing user to create more than one active room at a time, not good :(.
+- [x] Leave room action and acknowledgement events 
+- [x] Room Context
+- [ ] Update room context on edge case events like force refresh

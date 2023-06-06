@@ -29,6 +29,8 @@ interface ServerToClientEvents {
     "pool-count": (ack: AckType) => void;
     "ack:new-room": (ack: AckType) => void;
     "join-room": (ack: AckType) => void;
+    "ack:left-room": (ack: AckType) => void;
+    "leave-all-rooms": (ack: AckType) => void
 }
 
 type ConnectionCount = {
@@ -41,6 +43,8 @@ interface ClientToServerEvents {
     'get:pool-count': (foo: any, users: AckType) => void;
     'action:new-room': () => void;
     'action:join-room': (roomID: string) => void;
+    'action:leave-room': (ev: string, roomID: string) => void;
+    'action:leave-all-rooms': () => void;
 }
 
 interface InterServerEvents {
