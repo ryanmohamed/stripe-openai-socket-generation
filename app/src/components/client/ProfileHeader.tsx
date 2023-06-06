@@ -1,6 +1,8 @@
 import { useSession } from "next-auth/react";
 
 const ProfileHeader = ({ user }: any) => {
+    console.log("user", user)
+    
     return (
         <header className="p-6 md:py-12 border-b-2 border-stone-950">
             <div className="flex">

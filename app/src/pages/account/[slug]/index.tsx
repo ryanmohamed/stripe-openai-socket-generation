@@ -3,7 +3,6 @@ import { type NextPage } from "next";
 import Head from "next/head";
 import type { InferGetServerSidePropsType, GetServerSideProps } from 'next';
 import { prisma } from "@/server/db";
-import { useRouter } from "next/router";
 
 type UserInfo = {
 

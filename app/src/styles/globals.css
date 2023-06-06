@@ -30,7 +30,7 @@
       @apply centered bg-none p-0 relative h-full w-auto list-none;
     }
     .nav-mobile {
-      @apply bg-gradient-to-br from-black to-stone-950 px-10 flex items-center justify-between list-none fixed bottom-0 left-0 h-14 w-full z-[100];
+      @apply bg-gradient-to-br from-black to-stone-950 px-10 flex items-center justify-around list-none fixed bottom-0 left-0 h-14 w-full z-[100];
     }
     .nav-link {
       @apply bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded;

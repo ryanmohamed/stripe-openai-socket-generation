@@ -49,3 +49,15 @@ Reasons for this are as follows:
 
 ### Todo:
 1. Stripe payment required for writing to balance column. 
+
+## Logs
+1. Protected room and root account paths.
+2. Added socket events action:create-room & ack:create-room.
+3. Created hook for creating room and updating a component similar to clash of codes starter match .
+
+### Todo:  
+1. Add persistence to client component `CreateRoom`, when the user changes routes, the room is still created but the component remounts itself to it's original state, allowing user to create more than one active room at a time, not good :(.
+2. Isolate member component for re-use across app, specifically for `CreateRoom` and `JoinLink` components.
+3. Create JoinLink component displaying users in a room and a button to join it
+4. Add server logic to ack the information about the users in client's current room
+5. Add server logic to ack information about atleast 10 rooms (leave room for pagination)

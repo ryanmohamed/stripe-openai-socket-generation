@@ -74,3 +74,16 @@ export const coreServices = (emitTotalConnections, socket) => {
         emitTotalConnections();
     });
 }
+
+/* 
+
+*/
+export const generateRoomId = () => {
+    const alphabet = "0123456789";
+    let string = "";
+    for (let i = 0; i < 6; i++) {
+        const idx = Math.floor(Math.random() * alphabet.length)
+        string += (alphabet[idx]);
+    }
+    return string;
+}
