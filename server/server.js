@@ -28,6 +28,13 @@ pnsp.on("connection", (socket) => {
     console.log(`New public connection: ${socket.id}!\n`);
 });
 
+const roomMap = new Map();
+roomMap.set("123456", {
+    status: "waiting", // "waiting" | "ready",
+    members: new Set(), // // Set<string>,
+    currentQuestion: null, 
+});
+
 // middleware to validate incoming session token cookie against values in database
 ansp.use((socket, next) => {
     console.log(`Socket ${socket.id} attempting to connect to authenticated namespace...`)
@@ -80,10 +87,11 @@ ansp.on('connection', (socket) => {
 
     // response to client emitWithAck
     socket.on("action:new-room", () => {
-        console.log("Sending requested room id...");
+        const data = socket.handshake?.auth?.data?.user
         const rooms = ansp.adapter.rooms; // Map<string, Set<string>>
+       
         // 10^6 = 1000000
-        if (rooms.size === 1000000)
+        if (rooms.size === 1000000 || !data)
             ansp.to(socket.id).emit("new-room", {
                 data: null,
                 status: "error"
@@ -94,12 +102,26 @@ ansp.on('connection', (socket) => {
             while (rooms.get(idString) !== null && rooms.get(idString) !== undefined) 
                 idString = generateRoomId();
             
-            // create room socket and connect client, emit id to client
+            // create room socket and connect client, emit id to client, store client info
+            const user = {
+                name: data?.name || "Anonymous",
+                image: data?.image || "http://placeholder.co/500/500"
+            }
             socket.join(idString);
+            const members = new Set();
+            members.add(user);
+            const roomData = {
+                roomID: idString,
+                status: "waiting", // "waiting" | "ready",
+                members: [user], // // Set<string>,
+                currentQuestion: null, 
+            };
+            roomMap.set(idString, roomData);
             ansp.to(socket.id).emit("ack:new-room", {
-                data: idString,
+                data: roomData,
                 status: "ok"
             }); // emit to requester
+        
         }
     });
 
@@ -119,7 +141,7 @@ ansp.on('connection', (socket) => {
             // to do
         }
         
-        // room created 
+        // create room, store user information in map 
         else {  
             socket.join(roomID); // create-room called as side-effect
             ansp.to(socket.id).emit("join-room", {

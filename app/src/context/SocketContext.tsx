@@ -8,7 +8,7 @@ const privateURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http:/
 
 type AckType = {
     status: "ok" | "error";
-    data: ConnectedUserType[] | CountType | RoomId | null | any;
+    data: ConnectedUserType[] | CountType | RoomData | null | any;
 }
 
 type ConnectedUserType = {
@@ -16,9 +16,21 @@ type ConnectedUserType = {
     image: string;
 }
 
-type CountType = number;
+type UserData = {
+    name: string;
+    image: string;
+}
 
 type RoomId = string;
+
+type RoomData = {
+    roomID: RoomId,
+    status: "waiting" | "ready",
+    members: UserData[],
+    currentQuestion: null, // todo
+}
+
+type CountType = number;
 
 // "Types for the client"
 interface ServerToClientEvents {
