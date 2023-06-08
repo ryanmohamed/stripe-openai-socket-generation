@@ -1,18 +1,26 @@
+import { UserData } from "@/context/RoomContext";
 import usePoolCount from "@/hooks/usePoolCount";
+import { Key } from "react";
+import MemberLink from "../server/MemberLink";
 
-const ConnectedMembers = () => 
+const PoolMembers = () => 
 {
-    const { count } = usePoolCount();
+    const { count, members } = usePoolCount();
     return (
-        <div className="w-full h-64 rounded-xl overflow-hidden border-2 border-stone-950 bg-black">
-            <div className="flex items-center px-4 w-full h-10 bg-stone-950">
-                <h1 className="text-xl font-poppins text-stone-400 subpixel-antialiased">
-                    { count && <span> {count.toString()+" "} </span> } 
-                    Members in Pool
+        <div className="mb-10 w-full rounded-xl overflow-hidden border-2 border-stone-800">
+            <div className="flex items-center px-4 w-full h-10 border-b-2 border-stone-800">
+                <h1 className="text-xl font-poppins font-semibold text-stone-400">
+                    { members && <span> {members.length} Member{members.length !== 1 && "s"} in Pool </span> } 
                 </h1>
+            </div>
+
+            <div className="p-4 flex flex-wrap">
+                { members && members?.map((member: UserData, key: Key) => (
+                    <MemberLink key={key} name={member.name} src={member.image} />
+                ))}
             </div>
         </div>
     );
 }
 
-export default ConnectedMembers;
+export default PoolMembers;

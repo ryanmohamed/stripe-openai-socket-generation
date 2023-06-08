@@ -5,6 +5,8 @@ import Head from "next/head";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import JoinableRooms from "@/components/client/JoinableRooms";
+import PoolMembers from "@/components/client/ConnectedMembers";
+import RoomPanel from "@/components/server/RoomPanel";
 
 const Create: NextPage = () => {
   // redirect users without a session
@@ -29,8 +31,9 @@ const Create: NextPage = () => {
       </Head>
 
       <main className="page p-10">
+        <PoolMembers />
         <JoinableRooms />
-        <CreateRoom />
+        <RoomPanel />
       </main>
     </>
   );

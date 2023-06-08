@@ -3,23 +3,27 @@ import { useSession } from "next-auth/react";
 import { io, Socket } from 'socket.io-client';
 import useSocketContext from "@/hooks/useSocketContext";
 
-type RoomIDType = string | null | undefined;
-type UserData = {
+export type RoomIDType = string | null | undefined;
+
+export type UserData = {
     name: string;
     image: string;
 }
-type RoomDataType = {
+
+export type RoomDataType = {
     roomID: RoomIDType,
+    admin: string | null,
     status: "waiting" | "ready",
-    members: UserData[],
+    members: UserData[] | [],
     currentQuestion: null, // todo
 } | null;
 
-type RoomContextType = { 
+export type RoomContextType = { 
     roomID: RoomIDType;
     roomData: RoomDataType;
     createRoom: CallableFunction | null;
     leaveRoom: CallableFunction | null;
+    joinRoom: CallableFunction | null;
 };
 
 // code meant to be ran on client machine (hence use effect, etc)
@@ -28,6 +32,7 @@ export const RoomContext = createContext<RoomContextType>({
     roomData: null,
     createRoom: null,
     leaveRoom: null,
+    joinRoom: null
 });
 
 export const RoomProvider = ({children}: {
@@ -47,26 +52,34 @@ export const RoomProvider = ({children}: {
         if (roomID) socket?.emitWithAck("action:leave-room", roomID);
     }
 
+    const joinRoom = async (room: string) => {
+        socket?.emit("action:join-room", room);
+    }
+
+    const resetRoomContext = () => {
+        setRoomID(null);
+        setRoomData(null);
+    }
+
     useEffect(() => {
+        resetRoomContext(); // on socket change
         const handleNewRoom = ({ data }: { data: RoomDataType }) => {
             setRoomID(data?.roomID);
             setRoomData(data);
-            console.log(Array.from(data?.members || []))
         };
         const handleLeaveRoom = (ack: any) => {
             if (ack?.status === "ok") setRoomID(null);
         };
         if (socket) {
             socket.on("ack:new-room", handleNewRoom);
+            socket.on("ack:join-room", handleNewRoom);
             socket.on("ack:left-room", handleLeaveRoom);
             return () => {
                 socket.off("ack:new-room", handleNewRoom);
                 socket.off("ack:left-room", handleLeaveRoom);
+                socket.off("ack:join-room", handleNewRoom);
             };
         } 
-        else {
-            setRoomID(null);
-        }
     }, [socket]);
 
     useEffect(() => {
@@ -74,7 +87,7 @@ export const RoomProvider = ({children}: {
     }, []);
 
     return (
-        <RoomContext.Provider value={{ roomID, roomData, createRoom: createRoom, leaveRoom: leaveRoom }}>
+        <RoomContext.Provider value={{ roomID, roomData, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
             {children}
         </RoomContext.Provider>
     );

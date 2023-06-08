@@ -8,7 +8,7 @@ const port = 3001;
 import http from "http";
 const server = http.createServer(app);
 
-import { Server } from "socket.io";
+import { Namespace, Server } from "socket.io";
 const io = new Server(server, {
     cors: {
       origin: "http://localhost:3000",
@@ -16,7 +16,8 @@ const io = new Server(server, {
     }
 });
 
-import { coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate } from "./utilities.mjs"
+import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms } from "./utilities/utilities.mjs"
+
 
 const pnsp = io.of('/');
 const ansp = io.of('/authenticated');
@@ -29,11 +30,6 @@ pnsp.on("connection", (socket) => {
 });
 
 const roomMap = new Map();
-roomMap.set("123456", {
-    status: "waiting", // "waiting" | "ready",
-    members: new Set(), // // Set<string>,
-    currentQuestion: null, 
-});
 
 // middleware to validate incoming session token cookie against values in database
 ansp.use((socket, next) => {
@@ -75,48 +71,56 @@ ansp.on('connection', (socket) => {
     console.log(`Placing ${socket.id} into general pool...`)
     socket.join("pool");
 
-    // response to client emitWithAck
-    socket.on("get:pool-count", (foo, callback) => {
-        console.log("Sending requested pool count...");
-        const count = ansp.adapter.rooms.get("pool").size;
-        ansp.to(socket.id).emit("pool-count", {
-            data: count,
+    // client explicity asks for a rooms count (i.e on mount)
+    socket.on("get:room-count", (room) => {
+        // update requesters count only
+        // changes to the members array are sent to entire room via callbacks 
+        ansp.to(socket.id).emit("ack:room-count", {
+            data: {
+                members: getRoomMembers(ansp, room),
+                room: room
+            },
             status: "ok"
-        }); // emit to requester
+        });
     });
 
     // response to client emitWithAck
     socket.on("action:new-room", () => {
         const data = socket.handshake?.auth?.data?.user
-        const rooms = ansp.adapter.rooms; // Map<string, Set<string>>
-       
-        // 10^6 = 1000000
-        if (rooms.size === 1000000 || !data)
-            ansp.to(socket.id).emit("new-room", {
-                data: null,
-                status: "error"
-            });
+        const rooms = ansp.adapter.rooms; 
+        if (rooms.size === 1000000)
+            ackError(ansp, socket.id, "ack:new-room", "Too many active rooms.");
+        else if (!data) 
+            ackError(ansp, socket.id, "ack:new-room", "Connecting user has no session data.");
 
         else {
-            let idString = generateRoomId();
-            while (rooms.get(idString) !== null && rooms.get(idString) !== undefined) 
-                idString = generateRoomId();
+            const roomID = generateRoomId(ansp);
+            
+            //leave all rooms
+            const rooms = ansp.adapter.sids.get(socket.id);
+            console.log("\n\n\n\nYOOO", rooms)
+            for (let room of rooms){
+                if (room !== socket.id) socket.leave(room);
+            }
             
             // create room socket and connect client, emit id to client, store client info
-            const user = {
+            socket.join(roomID);
+
+            const members = [{
                 name: data?.name || "Anonymous",
                 image: data?.image || "http://placeholder.co/500/500"
-            }
-            socket.join(idString);
-            const members = new Set();
-            members.add(user);
+            }];
+
             const roomData = {
-                roomID: idString,
+                roomID: roomID, // string
+                admin: socket.id, // string
                 status: "waiting", // "waiting" | "ready",
-                members: [user], // // Set<string>,
+                members: members, // // { name: string, image: string }[],
                 currentQuestion: null, 
             };
-            roomMap.set(idString, roomData);
+
+            roomMap.set(roomID, roomData);
+            
             ansp.to(socket.id).emit("ack:new-room", {
                 data: roomData,
                 status: "ok"
@@ -127,28 +131,31 @@ ansp.on('connection', (socket) => {
 
     // response to client emitWithAck
     socket.on("action:join-room", (roomID) => {
+        console.log("JOINNNNING\N\N\N\N")
         const rooms = ansp.adapter.rooms;
+
         // if recieved non string or non 6 digit string
-        if (typeof roomID !== "string" || roomID.match(/^\d{6}$/)) {
-            ansp.to(socket.id).emit("join-room", {
-                data: null,
-                status: "error"
-            });
+        if (typeof roomID !== "string" || !roomID.match(/^\d{6}$/)) {
+            ackError(ansp, socket.id, "ack:join-room", "Bad room ID.");
         }
 
-        // if room exists already 
-        else if (rooms.get(roomID) !== undefined && rooms.get(roomID) !== null){
-            // to do
+        // room doesn't exist
+        else if (rooms.get(roomID) === undefined || rooms.get(roomID) === null){
+            ackError(ansp, socket.id, "ack:join-room", "Room doesn't exist.");
         }
         
         // create room, store user information in map 
         else {  
+            console.log("success!")
+            leaveAllRooms(ansp, socket);
             socket.join(roomID); // create-room called as side-effect
-            ansp.to(socket.id).emit("join-room", {
+            handleMemberCountChange(ansp, roomID);
+            ansp.to(socket.id).emit("ack:join-room", {
                 data: null,
                 status: "ok"
             });
         }
+        
     });
 
     // response to client emitWithAck
@@ -173,6 +180,7 @@ ansp.on('connection', (socket) => {
                 data: null,
                 status: "ok"
             });
+            socket.join("pool");
         }
     });
 
@@ -182,17 +190,21 @@ ansp.adapter.on("create-room", (room) => {
     console.log(`room ${room} was created`);
 });
 
-ansp.adapter.on("delete-room", (room) => {
-    console.log(`room ${room} was deleted`);
-});
-
 ansp.adapter.on("join-room", (room, id) => {
     room === "pool" && handlePoolUpdate(room, ansp);
-});
+    console.log(`${id} joined room ${room}`);
+    handleMemberCountChange(ansp, room, id);
+}); 
 
 ansp.adapter.on("leave-room", (room, id) => {
     room === "pool" && handlePoolUpdate(room, ansp);
     console.log(`${id} left room ${room}`);
+    handleMemberCountChange(ansp, room, id);
+});
+
+ansp.adapter.on("delete-room", (room) => {
+    console.log(`room ${room} was deleted`);
+    roomMap.set(room, undefined);
 });
 
 server.listen(port, () => console.log(`Listening on ${port}...`));

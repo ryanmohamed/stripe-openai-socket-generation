@@ -1,32 +1,38 @@
 import { useEffect, useState } from "react";
 import useSocketContext from "./useSocketContext";
-
-type CountType = number
+import { UserData, RoomCountUpdate, AckType } from "@/context/SocketContext";
 
 export default function usePoolCount() {
   const { socket } = useSocketContext();
   const [ count, setCount ] = useState<number>(0);
+  const [ members, setMembers ] = useState<UserData[] | null | undefined>(null);
 
   useEffect(() => {
-    const handleConnectionCount = ({ data }: { data: CountType}) => {
-      setCount(data);
+    const handleConnectionCount = (ack: AckType) => {
+      setCount(ack.data?.members?.length || 0);
+      ack.data?.room === "pool" && setMembers(ack.data?.members);
+      console.log("error:", ack?.errorMessage)
     };
 
     if (socket) {
-      // handle updates
-      socket.on("pool-count", handleConnectionCount);
+      setCount(0);
+      setMembers(null);
 
-      // ask for count, will be cached and emitted once the socket reconnects
-      const getPoolCount = async () => await socket.emitWithAck("get:pool-count", () => {});
-      getPoolCount();
+      // handle updates
+      socket.on("ack:room-count", handleConnectionCount);
+      socket.on("update:room-count", handleConnectionCount);
+
+      // ask for count
+      socket.emit("get:room-count", "pool");
 
       // clean up
       return () => {
-        socket.off("pool-count", handleConnectionCount);
+        socket.off("ack:room-count", handleConnectionCount);
+        socket.off("update:room-count", handleConnectionCount);
       };
     }
 
   }, [socket]);
 
-  return { count };
+  return { count, members };
 }

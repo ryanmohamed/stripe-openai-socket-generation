@@ -6,31 +6,37 @@ import { io, Socket } from 'socket.io-client';
 const publicURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http://localhost:3001/';
 const privateURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http://localhost:3001/authenticated';
 
-type AckType = {
+export type AckType = {
+    data: ConnectedUserType[] | CountType | RoomData | UserData[] | RoomCountUpdate | null | any;
     status: "ok" | "error";
-    data: ConnectedUserType[] | CountType | RoomData | null | any;
+    errorMessage?: string | null | undefined;
 }
 
-type ConnectedUserType = {
+export type ConnectedUserType = {
     name: string;
     image: string;
 }
 
-type UserData = {
+export type UserData = {
     name: string;
     image: string;
 }
 
 type RoomId = string;
+type CountType = number;
 
-type RoomData = {
+export type RoomData = {
     roomID: RoomId,
     status: "waiting" | "ready",
     members: UserData[],
     currentQuestion: null, // todo
 }
 
-type CountType = number;
+export type RoomCountUpdate = {
+    members: UserData[],
+    room: string
+}
+
 
 // "Types for the client"
 interface ServerToClientEvents {
@@ -38,9 +44,12 @@ interface ServerToClientEvents {
     basicEmit: (a: number, b: string, c: Buffer) => void;
     withAck: (d: string, callback: (e: number) => void) => void;
     "connection-count": (ack: AckType) => void;
-    "pool-count": (ack: AckType) => void;
+
+    "ack:room-count": (ack: AckType) => void;
+    "update:room-count": (ack: AckType) => void;
+
     "ack:new-room": (ack: AckType) => void;
-    "join-room": (ack: AckType) => void;
+    "ack:join-room": (ack: AckType) => void;
     "ack:left-room": (ack: AckType) => void;
     "leave-all-rooms": (ack: AckType) => void
 }
@@ -52,7 +61,8 @@ type ConnectionCount = {
   
 interface ClientToServerEvents {
     'get:connection-count': (foo: any, users: AckType) => void;
-    'get:pool-count': (foo: any, users: AckType) => void;
+    'get:room-count': (room: string) => void;
+
     'action:new-room': () => void;
     'action:join-room': (roomID: string) => void;
     'action:leave-room': (ev: string, roomID: string) => void;
