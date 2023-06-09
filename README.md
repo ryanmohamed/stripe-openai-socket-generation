@@ -96,7 +96,7 @@ Reasons for this are as follows:
   
 **Keep in mind** this Redis implementation should not be exposed to the internet, and should only accept connections from the socket-server instance the 2 are running on. Consider adding `requirepass` and `bind` in the deployed instances' `redis.conf` file. See more information [here.](https://redis.io/docs/management/security/)
 
-## Gettting Started
+### Gettting Started
 Run the Redis server for development purposes with
 ```bash
     cd server
@@ -114,7 +114,7 @@ Add dependency to Node
     npm install redis
 ```
 
-## Logs 
+### Logs 
 1. Major refactor to socket server code, reusability, clarity, and harnessing the power of events to distribute data in real time to many different clients. 
 2. Replaced local JS map with Redis key-value pairs.
 3. Records created, updated, and deleted based on rooms events of same names.
@@ -122,3 +122,11 @@ Add dependency to Node
    1. Changes to the pool are emitted to all authenticated connections, irrespective of whether they are in the pool or not.
    2. Room updates with the `roomID` "pool" are handled by `usePoolCount` hook.
    3. `RoomContext` foundational state like `roomID` and `roomData` can only be changed by an ACK made by the socket server for the events `ack:create-room`, `ack:update-room`, `ack:delete-room` as these explcitally imply the room the client is in. Whereas updates only inform us of changes made to any rooms we made be in, have left, or have altered.
+
+### To Do:
+1. Continue to refactor and remove repititions in the server code.
+2. Do major cleanup on client side code and ensure type safety for all contexts.
+3. Implement Admin functionality and handling. 
+4. Joinable rooms pagination. 
+5. Restyle `RoomPanel` 
+6. Stronger error messages on ack events from the server. 
