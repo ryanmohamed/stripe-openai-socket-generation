@@ -16,8 +16,27 @@ const io = new Server(server, {
     }
 });
 
-import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms } from "./utilities/utilities.mjs"
+// set up connection to redis 
+import { createClient } from "redis";
+const redisClient = createClient();
 
+// TODO: 
+// redisClient.auth('your_redis_password');
+
+// TODO:
+// redisClient.options... // Set any other necessary options here
+
+redisClient.connect();
+
+redisClient.on('connect', () => {
+    console.log("Succesfully connect to Redis.\n\n");
+})
+
+redisClient.on('error', () => {
+    console.log("Error connecting to Redis.\n\n");
+})
+
+import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms, getNewRoomData } from "./utilities/utilities.mjs";
 
 const pnsp = io.of('/');
 const ansp = io.of('/authenticated');
@@ -67,25 +86,22 @@ ansp.use((socket, next) => {
 ansp.on('connection', (socket) => {
     const emitTotalConnections = () => emitConnectionCount([pnsp, ansp], ansp);
     coreServices(emitTotalConnections, socket);
-    console.log(`\nNew private connection: ${socket.id}!`);
-    console.log(`Placing ${socket.id} into general pool...`)
+    console.log(`\nNew private connection: ${socket.id}!\n`);
     socket.join("pool");
 
     // client explicity asks for a rooms count (i.e on mount)
-    socket.on("get:room-count", (room) => {
+    socket.on("get:room-count", async (room) => {
         // update requesters count only
         // changes to the members array are sent to entire room via callbacks 
+        const roomData = await getNewRoomData(ansp, room, redisClient);
         ansp.to(socket.id).emit("ack:room-count", {
-            data: {
-                members: getRoomMembers(ansp, room),
-                room: room
-            },
+            data: roomData,
             status: "ok"
         });
     });
 
     // response to client emitWithAck
-    socket.on("action:new-room", () => {
+    socket.on("action:new-room", async () => {
         const data = socket.handshake?.auth?.data?.user
         const rooms = ansp.adapter.rooms; 
         if (rooms.size === 1000000)
@@ -96,14 +112,8 @@ ansp.on('connection', (socket) => {
         else {
             const roomID = generateRoomId(ansp);
             
-            //leave all rooms
-            const rooms = ansp.adapter.sids.get(socket.id);
-            console.log("\n\n\n\nYOOO", rooms)
-            for (let room of rooms){
-                if (room !== socket.id) socket.leave(room);
-            }
-            
             // create room socket and connect client, emit id to client, store client info
+            leaveAllRooms(ansp, socket, redisClient);
             socket.join(roomID);
 
             const members = [{
@@ -111,6 +121,7 @@ ansp.on('connection', (socket) => {
                 image: data?.image || "http://placeholder.co/500/500"
             }];
 
+            // data created
             const roomData = {
                 roomID: roomID, // string
                 admin: socket.id, // string
@@ -119,19 +130,23 @@ ansp.on('connection', (socket) => {
                 currentQuestion: null, 
             };
 
-            roomMap.set(roomID, roomData);
-            
-            ansp.to(socket.id).emit("ack:new-room", {
-                data: roomData,
-                status: "ok"
-            }); // emit to requester
-        
+            // avoid overhead of redis type, centralize data as string
+            const roomDataString = JSON.stringify(roomData);
+
+            // written to redis
+            const response = await redisClient.set(roomID, roomDataString);
+
+            if (response) {
+                ansp.to(socket.id).emit("ack:new-room", {
+                    data: roomData,
+                    status: "ok"
+                }); // emit to requester
+            }
         }
     });
 
     // response to client emitWithAck
-    socket.on("action:join-room", (roomID) => {
-        console.log("JOINNNNING\N\N\N\N")
+    socket.on("action:join-room", async (roomID) => {
         const rooms = ansp.adapter.rooms;
 
         // if recieved non string or non 6 digit string
@@ -146,13 +161,13 @@ ansp.on('connection', (socket) => {
         
         // create room, store user information in map 
         else {  
-            console.log("success!")
-            leaveAllRooms(ansp, socket);
-            socket.join(roomID); // create-room called as side-effect
-            handleMemberCountChange(ansp, roomID);
+            leaveAllRooms(ansp, socket, redisClient);
+            socket.join(roomID); // create-room called as side-effect  
+            // ack:join-room and ack:create-room update the clients room information, so we can't simply propogate change alone
+            const roomData = await getNewRoomData(ansp, roomID, redisClient);
             ansp.to(socket.id).emit("ack:join-room", {
-                data: null,
-                status: "ok"
+                data: roomData,
+                status: "ok" 
             });
         }
         
@@ -183,28 +198,40 @@ ansp.on('connection', (socket) => {
             socket.join("pool");
         }
     });
-
 });
 
 ansp.adapter.on("create-room", (room) => {
     console.log(`room ${room} was created`);
+    // explicitly add a unique record for the pool
+    if (room === "pool") {
+        const roomData = {
+            roomID: room,
+            admin: null, 
+            status: null, 
+            members: getRoomMembers(ansp, room),
+            currentQuestion: null, 
+        };
+        redisClient.set("pool", JSON.stringify(roomData));
+        return;
+    }
 });
 
-ansp.adapter.on("join-room", (room, id) => {
+ansp.adapter.on("join-room", async (room, id) => {
     room === "pool" && handlePoolUpdate(room, ansp);
     console.log(`${id} joined room ${room}`);
-    handleMemberCountChange(ansp, room, id);
+    handleMemberCountChange(ansp, room, redisClient, id); // update room as well as client specifically
 }); 
 
 ansp.adapter.on("leave-room", (room, id) => {
     room === "pool" && handlePoolUpdate(room, ansp);
     console.log(`${id} left room ${room}`);
-    handleMemberCountChange(ansp, room, id);
+    handleMemberCountChange(ansp, room, redisClient, id); // update room as well as the changer
 });
 
-ansp.adapter.on("delete-room", (room) => {
+ansp.adapter.on("delete-room", async (room) => {
+    await redisClient.del(room)
+    handleMemberCountChange(ansp, room, redisClient);
     console.log(`room ${room} was deleted`);
-    roomMap.set(room, undefined);
 });
 
 server.listen(port, () => console.log(`Listening on ${port}...`));

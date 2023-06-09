@@ -48,6 +48,10 @@ interface ServerToClientEvents {
     "ack:room-count": (ack: AckType) => void;
     "update:room-count": (ack: AckType) => void;
 
+    // differeniate between room-count because client
+    // knowledge of pool information is seperate to its room connection
+    "update:pool-count": (ack: AckType) => void;
+
     "ack:new-room": (ack: AckType) => void;
     "ack:join-room": (ack: AckType) => void;
     "ack:left-room": (ack: AckType) => void;

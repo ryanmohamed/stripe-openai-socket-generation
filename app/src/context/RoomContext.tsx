@@ -2,6 +2,7 @@ import { createContext, useEffect, useState, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { io, Socket } from 'socket.io-client';
 import useSocketContext from "@/hooks/useSocketContext";
+import { AckType } from "./SocketContext";
 
 export type RoomIDType = string | null | undefined;
 
@@ -63,21 +64,39 @@ export const RoomProvider = ({children}: {
 
     useEffect(() => {
         resetRoomContext(); // on socket change
-        const handleNewRoom = ({ data }: { data: RoomDataType }) => {
-            setRoomID(data?.roomID);
-            setRoomData(data);
-        };
+        // const handleNewRoom = ({ data }: { data: RoomDataType }) => {
+        //     console.log("ack!!!")
+        //     setRoomID(data?.roomID);
+        //     data?.roomID !== "pool" && setRoomData(data);
+        // };
         const handleLeaveRoom = (ack: any) => {
             if (ack?.status === "ok") setRoomID(null);
         };
+
+
+        // entering a room on create or join will explicitly set the user's room
+        const handleEnterLeaveRoom = ({ data, status }: { data: RoomDataType, status: "ok" | "error" }) => {
+            if (status.toLowerCase() === "ok") {
+                data?.roomID !== "pool" && setRoomID(data?.roomID);
+                data?.roomID !== "pool" && setRoomData(data);
+            }
+        };
+
+        // update room count only updates member count, so don't change 
+        const handleRoomUpdate = ({ data }: { data: RoomDataType }) => {
+            data?.roomID !== "pool" && setRoomData(data);
+        };
+
         if (socket) {
-            socket.on("ack:new-room", handleNewRoom);
-            socket.on("ack:join-room", handleNewRoom);
-            socket.on("ack:left-room", handleLeaveRoom);
+            socket.on("ack:new-room", handleEnterLeaveRoom); // mutates room data and room id
+            socket.on("ack:join-room", handleEnterLeaveRoom); // mutates room data and room id
+            socket.on("ack:left-room", handleEnterLeaveRoom); // mutates room data and room id
+            socket.on("update:room-count", handleRoomUpdate); // mutates room data
             return () => {
-                socket.off("ack:new-room", handleNewRoom);
-                socket.off("ack:left-room", handleLeaveRoom);
-                socket.off("ack:join-room", handleNewRoom);
+                socket.off("ack:new-room", handleEnterLeaveRoom);
+                socket.off("ack:left-room", handleEnterLeaveRoom);
+                socket.off("ack:join-room", handleEnterLeaveRoom);
+                socket.off("update:room-count", handleRoomUpdate);
             };
         } 
     }, [socket]);

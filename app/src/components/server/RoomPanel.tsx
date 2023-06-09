@@ -25,7 +25,7 @@ const RoomInformation = ({roomID }: { roomID: RoomIDType }) => {
                 <h1 className="font-poppins font-semibold text-xl text-stone-400 border-b-2 border-stone-800">Room {roomID}</h1>
                 <div className="h-full flex flex-col justify-between">
                     <div className="my-4 flex flex-wrap">
-                        { roomData && Array.from(roomData.members).map((member: UserData, key: Key) => (
+                        { roomData?.members && Array.from(roomData?.members).map((member: UserData, key: Key) => (
                             <MemberLink key={key} name={member.name} src={member.image}/>
                         ))}
                     </div>

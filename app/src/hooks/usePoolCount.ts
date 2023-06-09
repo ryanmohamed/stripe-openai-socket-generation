@@ -6,12 +6,18 @@ export default function usePoolCount() {
   const { socket } = useSocketContext();
   const [ count, setCount ] = useState<number>(0);
   const [ members, setMembers ] = useState<UserData[] | null | undefined>(null);
+  const [ poolMembers, setPoolMembers ] = useState<UserData[] | null | undefined>(null);
+
+  // useEffect(() => {
+  //   //this is cached for when socket is defined
+  //   socket?.emit("get:room-count", "pool");
+  // }, []);
 
   useEffect(() => {
     const handleConnectionCount = (ack: AckType) => {
       setCount(ack.data?.members?.length || 0);
-      ack.data?.room === "pool" && setMembers(ack.data?.members);
-      console.log("error:", ack?.errorMessage)
+      ack.data?.roomID === "pool" ? setPoolMembers(ack.data?.members) : setMembers(ack.data?.members);
+      console.log("data:", ack)
     };
 
     if (socket) {
@@ -34,5 +40,5 @@ export default function usePoolCount() {
 
   }, [socket]);
 
-  return { count, members };
+  return { count, members, poolMembers };
 }

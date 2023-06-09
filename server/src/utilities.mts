@@ -1,4 +1,5 @@
 import { Namespace, Socket } from "socket.io";
+import { RedisClientType } from "redis";
 
 /*
     Fisher-Yates algorithm to shuffle an array randomly
@@ -134,32 +135,78 @@ export const getRoomMembers = (namespace: Namespace, room: string) => {
     else return null;
 }
 
-export const handleMemberCountChange = (nsp: Namespace, room: string, id: string | null = null) => {
-    // get count, propogate new count to members
-    nsp.to(room).emit("update:room-count", {
-        data: {
-            members: getRoomMembers(nsp, room), 
-            room: room
-        },
-        status: "ok"
-    });
 
-    // update changer if needed
-    id && nsp.to(id).emit("update:room-count", {
-        data: {
-            members: getRoomMembers(nsp, room),
-            room: room
-        },
-        status: "ok"
-    });
+export const getNewRoomData = async (nsp: Namespace, room: string, redisClient: RedisClientType) => {  
+    /*
+        retrieve room data from redis
+        update with new contents according to managed rooms map
+        *** potentially gets called after the room has been deleted
+    */
+    const value = await redisClient.get(room);
+    if (value === null || value === undefined) return null;
+
+    const members = getRoomMembers(nsp, room);
+    if (!members || members.length == 0) {
+        await redisClient.del(room);
+        return null;
+    }
+
+    const oldRoomData = JSON.parse(value);
+    const roomData = {
+        roomID: oldRoomData.roomID,
+        admin: oldRoomData.admin, 
+        status: oldRoomData.status, 
+        members: getRoomMembers(nsp, room),
+        currentQuestion: oldRoomData?.currentQuestion, 
+    }; 
+    const newRoomDataString = JSON.stringify(roomData);
+    console.log("\n\n\n\nROOM DATA STRING: ", newRoomDataString);
+    const response = await redisClient.set(room, newRoomDataString);
+    if (response) return roomData;
+    return null;
+}
+
+export const handleMemberCountChange = async (nsp: Namespace, room: string, redisClient: RedisClientType, id: string | null = null) => {
+    
+    /* 
+        Function will be called for a few events
+            1. User creates a room
+            2. User joins a room 
+            3. User leaves a room
+            4. Anyone joins the pool 
+        Emitted to 
+            1. Creator 
+            2. Joiner
+            3. Leaver 
+            4. Anyone in affected room
+    */
+
+    // get previous redis record
+    const roomData = await getNewRoomData(nsp, room, redisClient);
+    if (roomData) {
+        // if the change happened to the pool, tell everyone
+        const cc = room === "pool" ? nsp : nsp.to(room);
+        cc.emit("update:room-count", {
+            data: roomData,
+            status: "ok"
+        });
+
+        // update changer if needed
+        id && nsp.to(id).emit("update:room-count", {
+            data: roomData,
+            status: "ok"
+        });
+    }
+    
 }
 
 
-export const leaveAllRooms = (nsp: Namespace, socket: Socket) => {
+export const leaveAllRooms = (nsp: Namespace, socket: Socket, redisClient: RedisClientType) => {
     const rooms = nsp.adapter.sids.get(socket.id);
     if (rooms) {
         for (let room of Array.from(rooms)){
             if (room !== socket.id) socket.leave(room);
+            handleMemberCountChange(nsp, room, redisClient); // update members of that room as this client leaves TEMPORARY
         }
     }
 }

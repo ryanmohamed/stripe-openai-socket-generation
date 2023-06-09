@@ -5,17 +5,17 @@ import MemberLink from "../server/MemberLink";
 
 const PoolMembers = () => 
 {
-    const { count, members } = usePoolCount();
+    const { count, poolMembers } = usePoolCount();
     return (
         <div className="mb-10 w-full rounded-xl overflow-hidden border-2 border-stone-800">
             <div className="flex items-center px-4 w-full h-10 border-b-2 border-stone-800">
                 <h1 className="text-xl font-poppins font-semibold text-stone-400">
-                    { members && <span> {members.length} Member{members.length !== 1 && "s"} in Pool </span> } 
+                    { poolMembers && <span> {poolMembers.length} Member{poolMembers.length !== 1 && "s"} in Pool </span> } 
                 </h1>
             </div>
 
             <div className="p-4 flex flex-wrap">
-                { members && members?.map((member: UserData, key: Key) => (
+                { poolMembers && poolMembers?.map((member: UserData, key: Key) => (
                     <MemberLink key={key} name={member.name} src={member.image} />
                 ))}
             </div>
