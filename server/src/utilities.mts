@@ -107,7 +107,8 @@ export const generateRoomId = (namespace: Namespace) => {
 export const ackError = (emittingNamespace: Namespace, socketID: string, event: string, errorMessage: string) => {
     emittingNamespace.to(socketID).emit(event, {
         data: null,
-        status: "error"
+        status: "error",
+        errorMessage: errorMessage
     });
 }
 
@@ -146,7 +147,7 @@ export const getNewRoomData = async (nsp: Namespace, room: string, redisClient: 
     if (value === null || value === undefined) return null;
 
     const members = getRoomMembers(nsp, room);
-    if (!members || members.length == 0) {
+    if ((!members || members.length == 0) && room !== "pool") {
         await redisClient.del(room);
         return null;
     }
@@ -160,7 +161,6 @@ export const getNewRoomData = async (nsp: Namespace, room: string, redisClient: 
         currentQuestion: oldRoomData?.currentQuestion, 
     }; 
     const newRoomDataString = JSON.stringify(roomData);
-    console.log("\n\n\n\nROOM DATA STRING: ", newRoomDataString);
     const response = await redisClient.set(room, newRoomDataString);
     if (response) return roomData;
     return null;
@@ -196,8 +196,7 @@ export const handleMemberCountChange = async (nsp: Namespace, room: string, redi
             data: roomData,
             status: "ok"
         });
-    }
-    
+    } 
 }
 
 

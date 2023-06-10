@@ -39,7 +39,7 @@
 
 @layer components {
     .page {
-      @apply flex-grow min-h-full w-full bg-gradient-to-b from-[#000000] to-[#15162c];
+      @apply flex-grow min-h-full pb-14 md:pb-0 h-fit w-full bg-gradient-to-b from-[#000000] to-[#15162c];
     }
     .nav {
       @apply centered bg-none p-0 relative h-full w-auto list-none;
@@ -82,10 +82,19 @@
     .glow-lg {
       text-shadow: 0px 2px 10px #64e995c2;
     }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
+    }
 }
 
 html, body {
   overflow-x: hidden;
   background: black;
 }
+
+
 

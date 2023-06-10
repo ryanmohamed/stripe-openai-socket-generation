@@ -1,6 +1,5 @@
 import { createContext, useEffect, useState, useRef, useMemo } from "react";
-import { useSession } from "next-auth/react";
-import { io, Socket } from 'socket.io-client';
+
 import useSocketContext from "@/hooks/useSocketContext";
 import { AckType } from "./SocketContext";
 
@@ -20,6 +19,7 @@ export type RoomDataType = {
 } | null;
 
 export type RoomContextType = { 
+    errors: string | null | undefined;
     roomID: RoomIDType;
     roomData: RoomDataType;
     createRoom: CallableFunction | null;
@@ -29,6 +29,7 @@ export type RoomContextType = {
 
 // code meant to be ran on client machine (hence use effect, etc)
 export const RoomContext = createContext<RoomContextType>({ 
+    errors: null,
     roomID: null,
     roomData: null,
     createRoom: null,
@@ -40,9 +41,9 @@ export const RoomProvider = ({children}: {
     children?: React.ReactNode;
 }) => 
 {
-    const { data: session } = useSession();
     const [ roomID, setRoomID ] = useState<RoomIDType>(null);
     const [ roomData, setRoomData ] = useState<RoomDataType>(null);
+    const [ errors, setErrors ] = useState<string | null | undefined>(null);
     const { socket } = useSocketContext();
 
     const createRoom = async () => {
@@ -53,9 +54,7 @@ export const RoomProvider = ({children}: {
         if (roomID) socket?.emitWithAck("action:leave-room", roomID);
     }
 
-    const joinRoom = async (room: string) => {
-        socket?.emit("action:join-room", room);
-    }
+    const joinRoom = async (room: string) => { socket?.emit("action:join-room", room); }
 
     const resetRoomContext = () => {
         setRoomID(null);
@@ -64,27 +63,33 @@ export const RoomProvider = ({children}: {
 
     useEffect(() => {
         resetRoomContext(); // on socket change
-        // const handleNewRoom = ({ data }: { data: RoomDataType }) => {
-        //     console.log("ack!!!")
-        //     setRoomID(data?.roomID);
-        //     data?.roomID !== "pool" && setRoomData(data);
-        // };
+
+        const handleErrors = (ack: AckType) => {
+            if (!ack || ack?.status === "error") {
+                setErrors(ack?.errorMessage);
+            }
+        }
+
         const handleLeaveRoom = (ack: any) => {
             if (ack?.status === "ok") setRoomID(null);
+            handleErrors(ack);
         };
 
-
         // entering a room on create or join will explicitly set the user's room
-        const handleEnterLeaveRoom = ({ data, status }: { data: RoomDataType, status: "ok" | "error" }) => {
+        const handleEnterLeaveRoom = (ack: AckType) => {
+            const { data, status } = ack;
             if (status.toLowerCase() === "ok") {
                 data?.roomID !== "pool" && setRoomID(data?.roomID);
                 data?.roomID !== "pool" && setRoomData(data);
             }
+            handleErrors(ack);
         };
 
         // update room count only updates member count, so don't change 
-        const handleRoomUpdate = ({ data }: { data: RoomDataType }) => {
+        const handleRoomUpdate = (ack: AckType) => {
+            const { data } = ack;
             data?.roomID !== "pool" && setRoomData(data);
+            handleErrors(ack);
         };
 
         if (socket) {
@@ -106,7 +111,7 @@ export const RoomProvider = ({children}: {
     }, []);
 
     return (
-        <RoomContext.Provider value={{ roomID, roomData, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
+        <RoomContext.Provider value={{ errors, roomID, roomData, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
             {children}
         </RoomContext.Provider>
     );

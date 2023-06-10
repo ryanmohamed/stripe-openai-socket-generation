@@ -7,9 +7,9 @@ import CreateRoom from "../client/CreateRoom";
 import MemberLink from "./MemberLink";
 
 const ConnectOptions = () => (
-    <div className="flex flex-row-reverse flex-grow justify-between">
-        <JoinRoom extraStyles="text-center h-full w-1/2 rounded-none border-[0] border-l-2 border-stone-800"/>
-        <CreateRoom extraStyles="h-full w-1/2 border-none"/>
+    <div className="flex flex-wrap flex-col md:flex-row flex-grow justify-between">
+        <CreateRoom extraStyles="md:w-1/2 p-4 border-none"/>
+        <JoinRoom extraStyles="text-center md:w-1/2 rounded-none border-[0] border-t-2 md:border-t-[0] md:border-l-2 border-stone-800"/>  
     </div>
 )
 
@@ -39,7 +39,7 @@ const RoomInformation = ({roomID }: { roomID: RoomIDType }) => {
 const RoomPanel = () => {
     const { roomID } = useRoomContext();
     return (
-        <div className="flex w-full mb-10 rounded-md border-2 border-stone-800">
+        <div className="shadow-xl shadow-black flex w-full h-full rounded-xl border-2 border-stone-800 bg-gradient-to-b from-stone-950 to-black">
             { roomID ? <RoomInformation roomID={ roomID } /> : <ConnectOptions />}
         </div>
     );
