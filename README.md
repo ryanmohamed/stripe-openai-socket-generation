@@ -1,6 +1,6 @@
 # Stripe OpenAI Sockets with T3 stack, Express and PostgreSQL
 
-![demo image](https://i.ibb.co/7GPZ3Bm/Screen-Shot-2023-06-10-at-1-46-27-AM.png)
+<!-- ![demo image](https://i.ibb.co/7GPZ3Bm/Screen-Shot-2023-06-10-at-1-46-27-AM.png) -->
 
 ## Validating connections to the socket server
 **See branch `socket-connection`**
@@ -138,5 +138,5 @@ Add dependency to Node
 2. Fixed some edge cases on server side
 3. Added some styles for the room page
 
-![room page example](https://i.ibb.co/kM002T1/Screen-Shot-2023-06-10-at-1-46-08-AM.png)
-![room connection example](https://i.ibb.co/7rWJKfX/Screen-Shot-2023-06-10-at-1-50-24-AM.png)
+<!-- ![room page example](https://i.ibb.co/kM002T1/Screen-Shot-2023-06-10-at-1-46-08-AM.png)
+![room connection example](https://i.ibb.co/7rWJKfX/Screen-Shot-2023-06-10-at-1-50-24-AM.png) -->
