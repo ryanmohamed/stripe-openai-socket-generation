@@ -1,5 +1,7 @@
 # Stripe OpenAI Sockets with T3 stack, Express and PostgreSQL
 
+![demo image](https://i.ibb.co/7GPZ3Bm/Screen-Shot-2023-06-10-at-1-46-27-AM.png)
+
 ## Validating connections to the socket server
 **See branch `socket-connection`**
 Some key points to keep in mind:
@@ -130,3 +132,11 @@ Add dependency to Node
 4. Joinable rooms pagination. 
 5. Restyle `RoomPanel` 
 6. Stronger error messages on ack events from the server. 
+
+## Logs
+1. Refactored client side code
+2. Fixed some edge cases on server side
+3. Added some styles for the room page
+
+![room page example](https://i.ibb.co/kM002T1/Screen-Shot-2023-06-10-at-1-46-08-AM.png)
+![room connection example](https://i.ibb.co/7rWJKfX/Screen-Shot-2023-06-10-at-1-50-24-AM.png)
