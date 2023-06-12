@@ -9,6 +9,7 @@ import PoolMembers from "@/components/client/ConnectedMembers";
 import RoomPanel from "@/components/server/RoomPanel";
 import { useState } from "react";
 import ToggleMatchMaking from "../../components/client/ToggleMatchMaking";
+import Footer from "@/components/server/Footer";
 
 const Create: NextPage = () => {
   // redirect users without a session
@@ -33,15 +34,47 @@ const Create: NextPage = () => {
       </Head>
 
       <main className="page"> 
-
-        <div className="h-fit md:h-[700px] p-4 md:grid grid-rows-5 grid-cols-3">
-          <div className="row-span-3 col-span-2 centered p-4 "><RoomPanel /></div>
-          <div className="md:row-span-5 col-start-3 p-4 centered w-full md:h-full"><PoolMembers /></div>
-          <div className="row-span-2 col-span-2 w-full h-full p-4">
-            <ToggleMatchMaking />
+        <main className="px-10 md:px-20 pb-20">
+          <header className="mb-14">
+            <h1 className="mb-2 pb-2 text-5xl border-b-2 border-stone-800">Rooms</h1>
+            <p className="text-lg">Connect with other members and start creating!</p>
+          </header>
+          <div className="mb-14 h-fit md:h-[700px] w-full md:grid gap-6 grid-rows-5 grid-cols-3">
+            <div className="row-span-3 col-span-2 centered pb-6 md:pb-0"><RoomPanel /></div>
+            <div className="md:row-span-5 col-start-3 centered w-full md:h-full pb-6 md:pb-0"><PoolMembers /></div>
+            <div className="row-span-2 col-span-2 w-full h-full">
+              <ToggleMatchMaking />
+            </div>
           </div>
-        </div>
+          <section className="mt-20">
+            <h1 className="mb-6 pb-2 text-3xl border-b-2 border-stone-800">How Does It Work?</h1>
+            <div className="px-4"> 
+              <div className="mb-10">
+                <p className="font-barlow mb-4">The foundation of your artwork is made through <span className="h">rooms</span>. </p>
+                <p className="font-barlow mb-4">You will be <span className="h">paired up</span> with members in your room and <span className="h">answer a series of questions</span>.</p>
+                <p className="font-barlow mb-4">At the end of your match, your rooms answers will be used to <span className="h">AI generate an image</span> for all members to save.</p>
+              </div>
 
+              <div className="flex flex-col md:flex-row gap-10">
+                <div className="flex-1 p-4 rounded-lg border-2 border-indigo-950">
+                  <h3 className="mb-4 border-b-2 border-stone-800">Here for the first time?</h3>
+                  <p className="font-barlow">Turn on <span className="h">match-making</span> and randomly connect with members in the <span className="h">pool</span>.</p>
+                </div>
+
+                <div className="flex-1 p-4 rounded-lg border-2 border-indigo-950">
+                  <h3 className="mb-4 border-b-2 border-stone-800">Joining a friend?</h3>
+                  <p className="font-barlow">Ask for their <span className="h">room code</span> or grab it from the <span className="h">gallery</span>.</p>
+                </div>
+
+                <div className="flex-1 p-4 rounded-lg border-2 border-indigo-950">
+                  <h3 className="mb-4 border-b-2 border-stone-800">Looking to start a match?</h3>
+                  <p className="font-barlow">Ask for their <span className="h">room code</span> or grab it from the <span className="h">gallery</span>.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+        <Footer />
       </main>
     </>
   );

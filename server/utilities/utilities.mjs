@@ -198,3 +198,14 @@ export const leaveAllRooms = (nsp, socket, redisClient) => {
         }
     }
 };
+/*
+    Preventative utilities
+*/
+export const isInRoom = (nsp, socket, room) => {
+    const rooms = nsp.adapter.sids.get(socket.id);
+    if (!rooms)
+        return false;
+    if (rooms.has(room))
+        return true;
+    return false;
+};

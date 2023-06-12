@@ -56,7 +56,9 @@ interface ServerToClientEvents {
     "ack:new-room": (ack: AckType) => void;
     "ack:join-room": (ack: AckType) => void;
     "ack:left-room": (ack: AckType) => void;
-    "leave-all-rooms": (ack: AckType) => void
+    "leave-all-rooms": (ack: AckType) => void;
+
+    "ack:start-match": (ack: AckType) => void;
 }
 
 type ConnectionCount = {
@@ -72,6 +74,8 @@ interface ClientToServerEvents {
     'action:join-room': (roomID: string) => void;
     'action:leave-room': (roomID: string) => void;
     'action:leave-all-rooms': () => void;
+
+    'action:start-match': (roomID: string) => void;
 }
 
 interface InterServerEvents {

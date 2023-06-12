@@ -36,7 +36,7 @@ redisClient.on('error', () => {
     console.log("Error connecting to Redis.\n\n");
 })
 
-import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms, getNewRoomData } from "./utilities/utilities.mjs";
+import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms, getNewRoomData, isInRoom } from "./utilities/utilities.mjs";
 
 const pnsp = io.of('/');
 const ansp = io.of('/authenticated');
@@ -48,14 +48,14 @@ pnsp.on("connection", (socket) => {
     console.log(`New public connection: ${socket.id}!\n`);
 });
 
-const roomData = {
+const initialRoomData = {
     roomID: "pool",
     admin: null, 
     status: null, 
     members: getRoomMembers(ansp, "pool"),
     currentQuestion: null, 
 };
-redisClient.set("pool", JSON.stringify(roomData));
+redisClient.set("pool", JSON.stringify(initialRoomData));
 
 // middleware to validate incoming session token cookie against values in database
 ansp.use((socket, next) => {
@@ -205,6 +205,30 @@ ansp.on('connection', (socket) => {
             });
         }
     });
+
+    socket.on("action:start-match", async (roomID) => {
+        if(!isInRoom(ansp, socket, roomID)) return ackError(ansp, socket.id, "action:start-match", "Not in room.");
+        const roomDataString = await redisClient.get(roomID);
+        const roomData = JSON.parse(roomDataString || "null");
+        if(!roomData) return ackError(ansp, socket.id, "action:start-match", "No room data found.");
+        if(roomData?.admin !== socket.id) return ackError(ansp, socket.id, "action:start-match", "Not an admin for this room.");
+        
+        const newRoomData = {
+            roomID: roomData?.roomID || roomID,
+            admin: roomData?.admin, 
+            status: "ready", 
+            members: getRoomMembers(ansp, roomID),
+            currentQuestion: 1, 
+        }; 
+        const newRoomDataString = JSON.stringify(newRoomData);
+        const status = await redisClient.set(roomID, newRoomDataString);
+        if (!status) return ackError(ansp, socket.id, "action:start-match", "Error occured updating room.");
+        ansp.to(roomID).emit("ack:start-match", {
+            data: newRoomData,
+            status: "ok"
+        });
+    })
+
 });
 
 ansp.adapter.on("create-room", (room) => {

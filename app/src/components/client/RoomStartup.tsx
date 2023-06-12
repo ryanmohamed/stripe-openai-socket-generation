@@ -4,11 +4,18 @@ import useRoomContext from "@/hooks/useRoomContext";
 import MemberLink from "../server/MemberLink";
 import Crown from "../svg/Crown";
 
+import useSocketContext from "@/hooks/useSocketContext";
+
 const RoomStartup = ({roomID }: { roomID: RoomIDType }) => {
+    const { socket } = useSocketContext();
     const { roomData, isAdmin, leaveRoom } = useRoomContext();
     const handleLeave: MouseEventHandler<HTMLButtonElement> = async (event) => {
         event.preventDefault();
         leaveRoom && leaveRoom(roomData?.roomID);
+    }
+    const handleStart: MouseEventHandler<HTMLButtonElement> = async (event) => {
+        event.preventDefault();
+        roomData?.roomID && socket?.emit("action:start-match", roomData.roomID);
     }
     return (
         <div className="h-full w-full flex flex-grow justify-between">
@@ -23,7 +30,7 @@ const RoomStartup = ({roomID }: { roomID: RoomIDType }) => {
                         ))}
                     </div>
                     <div className="flex flex-col w-full">
-                        { (isAdmin && roomData && roomData?.members?.length > 1) && <button onClick={handleLeave} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4" type="button">Start match</button>}
+                        { (isAdmin && roomData && roomData?.members?.length > 1) && <button onClick={handleStart} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4" type="button">Start match</button>}
                         <button onClick={handleLeave} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-red-800 hover:bg-red-600 transition-colors" type="button">Leave Room</button>
                     </div>
                 </div>

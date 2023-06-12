@@ -209,7 +209,6 @@ export const handleMemberCountChange = async (nsp: Namespace, room: string, redi
     } 
 }
 
-
 export const leaveAllRooms = (nsp: Namespace, socket: Socket, redisClient: RedisClientType) => {
     const rooms = nsp.adapter.sids.get(socket.id);
     if (rooms) {
@@ -218,4 +217,14 @@ export const leaveAllRooms = (nsp: Namespace, socket: Socket, redisClient: Redis
             handleMemberCountChange(nsp, room, redisClient); // update members of that room as this client leaves TEMPORARY
         }
     }
+}
+
+/*
+    Preventative utilities
+*/
+export const isInRoom = (nsp: Namespace, socket: Socket, room: string) => {
+    const rooms = nsp.adapter.sids.get(socket.id);
+    if(!rooms) return false;
+    if (rooms.has(room)) return true;
+    return false;
 }

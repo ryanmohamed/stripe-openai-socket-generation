@@ -21,13 +21,13 @@
 
 @layer base {
     h1 {
-      @apply transition text-2xl;
+      @apply transition text-2xl font-poppins subpixel-antialiased text-stone-300;
     }
     h3 {
-      @apply transition text-xl;
+      @apply transition text-xl font-poppins subpixel-antialiased text-stone-300;
     }
     p {
-      @apply transition text-lg;
+      @apply transition font-poppins subpixel-antialiased text-stone-300;
     }
     /* remove arrows from number input */
     input[type="number"]::-webkit-inner-spin-button,
@@ -67,6 +67,9 @@
     }
     .price-tile-span {
       @apply w-full h-full rounded-md centered;
+    }
+    .h {
+      @apply text-zinc-100 underline font-semibold subpixel-antialiased;
     }
   }
   

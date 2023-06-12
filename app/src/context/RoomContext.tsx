@@ -2,6 +2,7 @@ import { createContext, useEffect, useState, useRef, useMemo } from "react";
 
 import useSocketContext from "@/hooks/useSocketContext";
 import { AckType } from "./SocketContext";
+import { useRouter } from "next/router";
 
 export type RoomIDType = string | null | undefined;
 
@@ -49,6 +50,7 @@ export const RoomProvider = ({children}: {
     const [ errors, setErrors ] = useState<string | null | undefined>(null);
     const [ isAdmin, setIsAdmin ] = useState<boolean | null | undefined>(null);
     const { socket, connectionStatus } = useSocketContext();
+    const router = useRouter();
 
     const createRoom = async () => {
         socket?.emitWithAck("action:new-room");
@@ -106,6 +108,9 @@ export const RoomProvider = ({children}: {
             socket.on("ack:join-room", handleEnterRoom); // mutates room data and room id
             socket.on("ack:left-room", handleLeaveRoom); // mutates room data and room id
             socket.on("update:room-count", handleRoomUpdate); // mutates room data
+            socket.on("ack:start-match", (ack: AckType) => {
+                router.push("/match");
+            } ); // mutates room data
             return () => {
                 socket.off("ack:new-room", handleEnterRoom);
                 socket.off("ack:left-room", handleEnterRoom);
@@ -129,9 +134,6 @@ export const RoomProvider = ({children}: {
     useEffect(() => {
         (roomData && roomData.admin === socket?.id) ? setIsAdmin(true) : setIsAdmin(false);
     }, [roomData])
-
-
-    console.log("rd:", roomData)
 
     return (
         <RoomContext.Provider value={{ errors, roomID, roomData, isAdmin, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
