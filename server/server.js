@@ -48,7 +48,14 @@ pnsp.on("connection", (socket) => {
     console.log(`New public connection: ${socket.id}!\n`);
 });
 
-const roomMap = new Map();
+const roomData = {
+    roomID: "pool",
+    admin: null, 
+    status: null, 
+    members: getRoomMembers(ansp, "pool"),
+    currentQuestion: null, 
+};
+redisClient.set("pool", JSON.stringify(roomData));
 
 // middleware to validate incoming session token cookie against values in database
 ansp.use((socket, next) => {
@@ -87,7 +94,7 @@ ansp.on('connection', (socket) => {
     const emitTotalConnections = () => emitConnectionCount([pnsp, ansp], ansp);
     coreServices(emitTotalConnections, socket);
     console.log(`\nNew private connection: ${socket.id}!\n`);
-    socket.join("pool");
+    //socket.join("pool");
 
     // client explicity asks for a rooms count (i.e on mount)
     socket.on("get:room-count", async (room) => {
@@ -117,6 +124,7 @@ ansp.on('connection', (socket) => {
             socket.join(roomID);
 
             const members = [{
+                id: socket.id,
                 name: data?.name || "Anonymous",
                 image: data?.image || "http://placeholder.co/500/500"
             }];
@@ -150,12 +158,12 @@ ansp.on('connection', (socket) => {
         const rooms = ansp.adapter.rooms;
 
         // if recieved non string or non 6 digit string
-        if (typeof roomID !== "string" || !roomID.match(/^\d{6}$/)) {
+        if  (typeof roomID !== "string" || (!roomID.match(/^\d{6}$/) && roomID !== "pool")) {
             ackError(ansp, socket.id, "ack:join-room", "Bad room ID.");
         }
 
         // room doesn't exist
-        else if (rooms.get(roomID) === undefined || rooms.get(roomID) === null){
+        else if (roomID !== "pool" && rooms.get(roomID) === undefined || rooms.get(roomID) === null){
             ackError(ansp, socket.id, "ack:join-room", "Room doesn't exist.");
         }
         
@@ -170,14 +178,13 @@ ansp.on('connection', (socket) => {
                 status: "ok" 
             });
         }
-        
     });
 
     // response to client emitWithAck
-    socket.on("action:leave-room", (roomID) => {
+    socket.on("action:leave-room", async (roomID) => {
         const rooms = ansp.adapter.rooms;
         // if recieved non string or non 6 digit string
-        const notValidID = typeof roomID !== "string" || !roomID.match(/^\d{6}$/);
+        const notValidID = typeof roomID !== "string" || (!roomID.match(/^\d{6}$/) && roomID !== "pool");
         const doesNotExist = rooms.get(roomID) === undefined || rooms.get(roomID) === null
         const doesNotIncludeClient = !rooms?.get(roomID)?.has(socket.id);
         
@@ -191,29 +198,17 @@ ansp.on('connection', (socket) => {
         // remove socket
         else {  
             socket.leave(roomID); // leave-room called as side-effect
+            const roomData = await getNewRoomData(ansp, roomID, redisClient);
             ansp.to(socket.id).emit("ack:left-room", {
-                data: null,
-                status: "ok"
+                data: roomData,
+                status: "ok" 
             });
-            socket.join("pool");
         }
     });
 });
 
 ansp.adapter.on("create-room", (room) => {
     console.log(`room ${room} was created`);
-    // explicitly add a unique record for the pool
-    if (room === "pool") {
-        const roomData = {
-            roomID: room,
-            admin: null, 
-            status: null, 
-            members: getRoomMembers(ansp, room),
-            currentQuestion: null, 
-        };
-        redisClient.set("pool", JSON.stringify(roomData));
-        return;
-    }
 });
 
 ansp.adapter.on("join-room", async (room, id) => {
@@ -222,14 +217,19 @@ ansp.adapter.on("join-room", async (room, id) => {
     handleMemberCountChange(ansp, room, redisClient, id); // update room as well as client specifically
 }); 
 
-ansp.adapter.on("leave-room", (room, id) => {
+ansp.adapter.on("leave-room", async (room, id) => {
     room === "pool" && handlePoolUpdate(room, ansp);
     console.log(`${id} left room ${room}`);
+
+    const roomDataString = await redisClient.get(room);
+    const roomDataJSON = JSON.parse(roomDataString || "null");
+    if(roomDataJSON)
+
     handleMemberCountChange(ansp, room, redisClient, id); // update room as well as the changer
 });
 
 ansp.adapter.on("delete-room", async (room) => {
-    await redisClient.del(room)
+    room !== "pool" && await redisClient.del(room)
     handleMemberCountChange(ansp, room, redisClient);
     console.log(`room ${room} was deleted`);
 });

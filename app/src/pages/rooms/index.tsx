@@ -8,6 +8,7 @@ import JoinableRooms from "@/components/client/JoinableRooms";
 import PoolMembers from "@/components/client/ConnectedMembers";
 import RoomPanel from "@/components/server/RoomPanel";
 import { useState } from "react";
+import ToggleMatchMaking from "../../components/client/ToggleMatchMaking";
 
 const Create: NextPage = () => {
   // redirect users without a session
@@ -22,8 +23,6 @@ const Create: NextPage = () => {
   if ( status === "loading" ) {
     return <>Loading...</>; 
   }
-
-  const [ toggle, setToggle ] = useState<boolean>(false);
   
   return (
     <>
@@ -39,15 +38,7 @@ const Create: NextPage = () => {
           <div className="row-span-3 col-span-2 centered p-4 "><RoomPanel /></div>
           <div className="md:row-span-5 col-start-3 p-4 centered w-full md:h-full"><PoolMembers /></div>
           <div className="row-span-2 col-span-2 w-full h-full p-4">
-            <div className="shadow-xl shadow-black p-8 py-10 flex flex-col justify-between w-full h-full bg-gradient-to-r from-stone-950 to-black rounded-md border-2 border-stone-800">
-              <h1 className="font-poppins font-semibold text-4xl text-stone-300 subpixel-antialiased border-b-2 border-stone-800 w-fit">Matchmacking</h1>
-              <div>
-                <p className="mt-4 text-xl font-barlow subpixel-antialiased text-stone-400">Randomly connect with members in the pool?</p>
-                <div className="mt-4 focus:outline-none group hover:cursor-pointer flex items-center px-2 h-14 w-36 rounded-full bg-gradient-to-l from-green-600 to-emerald-950 shadow-inner shadow-black border-2 border-emerald-950" onClick={()=>{setToggle(!toggle)}}>
-                  <div className={`${toggle ? "bg-stone-200" : "bg-stone-400"} h-10 w-10 rounded-full shadow-lg shadow-black transition-all group-hover:shadow-stone-950 group-hover:bg-stone-200 ${toggle ? "ml-20" : ""}`} onClick={()=>{setToggle(!toggle)}}></div>
-                </div>
-              </div>
-            </div>
+            <ToggleMatchMaking />
           </div>
         </div>
 

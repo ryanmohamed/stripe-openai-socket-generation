@@ -20,7 +20,7 @@ const JoinRoom = ({ extraStyles }: { extraStyles?: string }) => {
     return (
         <form 
             onSubmit={handleSubmit}
-            className={`flex-grow px-4 py-10 rounded-md flex flex-col items-center border-2 border-stone-800 ${extraStyles}`}
+            className={`flex-grow px-4 py-10 rounded-md centered flex-col border-2 border-stone-800 ${extraStyles}`}
         >
             <h1 className="w-fit text-center text-2xl mb-4 border-b-2 border-stone-800 text-stone-400 font-poppins font-semibold subpixel-antialiased" aria-label="room id form">Join a Room</h1>
             <div className="flex flex-col mb-6">
@@ -35,7 +35,7 @@ const JoinRoom = ({ extraStyles }: { extraStyles?: string }) => {
                 />
                 { error && <span className="mt-2 animate-shake font-barlow text-red-600">{error || errors}</span> }
             </div>
-            <button disabled={error !== null && error !== undefined} className="self-center h-14 w-1/2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors">Join Room</button>
+            <button disabled={error !== null && error !== undefined} className="self-center h-14 w-1/2 px-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors">Join Room</button>
         </form>
     );
 }

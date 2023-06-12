@@ -140,3 +140,7 @@ Add dependency to Node
 
 <!-- ![room page example](https://i.ibb.co/kM002T1/Screen-Shot-2023-06-10-at-1-46-08-AM.png)
 ![room connection example](https://i.ibb.co/7rWJKfX/Screen-Shot-2023-06-10-at-1-50-24-AM.png) -->
+
+
+### To Do:
+1. Handle socket disconnections, when the server abruptly shuts down the rooms in progress should be 

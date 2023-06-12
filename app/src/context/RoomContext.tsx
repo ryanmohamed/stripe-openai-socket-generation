@@ -6,6 +6,7 @@ import { AckType } from "./SocketContext";
 export type RoomIDType = string | null | undefined;
 
 export type UserData = {
+    id?: string | null | undefined;
     name: string;
     image: string;
 }
@@ -22,6 +23,7 @@ export type RoomContextType = {
     errors: string | null | undefined;
     roomID: RoomIDType;
     roomData: RoomDataType;
+    isAdmin: boolean | null | undefined;
     createRoom: CallableFunction | null;
     leaveRoom: CallableFunction | null;
     joinRoom: CallableFunction | null;
@@ -32,6 +34,7 @@ export const RoomContext = createContext<RoomContextType>({
     errors: null,
     roomID: null,
     roomData: null,
+    isAdmin: null,
     createRoom: null,
     leaveRoom: null,
     joinRoom: null
@@ -44,14 +47,16 @@ export const RoomProvider = ({children}: {
     const [ roomID, setRoomID ] = useState<RoomIDType>(null);
     const [ roomData, setRoomData ] = useState<RoomDataType>(null);
     const [ errors, setErrors ] = useState<string | null | undefined>(null);
-    const { socket } = useSocketContext();
+    const [ isAdmin, setIsAdmin ] = useState<boolean | null | undefined>(null);
+    const { socket, connectionStatus } = useSocketContext();
 
     const createRoom = async () => {
         socket?.emitWithAck("action:new-room");
     }
 
-    const leaveRoom = async () => {
-        if (roomID) socket?.emitWithAck("action:leave-room", roomID);
+    const leaveRoom = async (room: string | null = null) => {
+        if (room) socket?.emit("action:leave-room", room);
+        if (roomID) socket?.emit("action:leave-room", roomID);
     }
 
     const joinRoom = async (room: string) => { socket?.emit("action:join-room", room); }
@@ -59,6 +64,7 @@ export const RoomProvider = ({children}: {
     const resetRoomContext = () => {
         setRoomID(null);
         setRoomData(null);
+        setIsAdmin(null);
     }
 
     useEffect(() => {
@@ -70,13 +76,8 @@ export const RoomProvider = ({children}: {
             }
         }
 
-        const handleLeaveRoom = (ack: any) => {
-            if (ack?.status === "ok") setRoomID(null);
-            handleErrors(ack);
-        };
-
         // entering a room on create or join will explicitly set the user's room
-        const handleEnterLeaveRoom = (ack: AckType) => {
+        const handleEnterRoom = (ack: AckType) => {
             const { data, status } = ack;
             if (status.toLowerCase() === "ok") {
                 data?.roomID !== "pool" && setRoomID(data?.roomID);
@@ -84,6 +85,14 @@ export const RoomProvider = ({children}: {
             }
             handleErrors(ack);
         };
+
+        const handleLeaveRoom =(ack: AckType) =>  {
+            const { data, status } = ack;
+            if (status.toLowerCase() === "ok") {
+                data?.roomID !== "pool" && setRoomID(null);
+                data?.roomID !== "pool" && setRoomData(null);
+            }
+        }
 
         // update room count only updates member count, so don't change 
         const handleRoomUpdate = (ack: AckType) => {
@@ -93,14 +102,14 @@ export const RoomProvider = ({children}: {
         };
 
         if (socket) {
-            socket.on("ack:new-room", handleEnterLeaveRoom); // mutates room data and room id
-            socket.on("ack:join-room", handleEnterLeaveRoom); // mutates room data and room id
-            socket.on("ack:left-room", handleEnterLeaveRoom); // mutates room data and room id
+            socket.on("ack:new-room", handleEnterRoom); // mutates room data and room id
+            socket.on("ack:join-room", handleEnterRoom); // mutates room data and room id
+            socket.on("ack:left-room", handleLeaveRoom); // mutates room data and room id
             socket.on("update:room-count", handleRoomUpdate); // mutates room data
             return () => {
-                socket.off("ack:new-room", handleEnterLeaveRoom);
-                socket.off("ack:left-room", handleEnterLeaveRoom);
-                socket.off("ack:join-room", handleEnterLeaveRoom);
+                socket.off("ack:new-room", handleEnterRoom);
+                socket.off("ack:left-room", handleEnterRoom);
+                socket.off("ack:join-room", handleLeaveRoom);
                 socket.off("update:room-count", handleRoomUpdate);
             };
         } 
@@ -110,8 +119,22 @@ export const RoomProvider = ({children}: {
         socket?.emitWithAck("action:leave-all-rooms");
     }, []);
 
+    // handle socket disconnections 
+    useEffect(() => {
+        if(connectionStatus === "disconnect" || connectionStatus === "error") {
+            resetRoomContext();
+        }
+    }, [connectionStatus]);
+
+    useEffect(() => {
+        (roomData && roomData.admin === socket?.id) ? setIsAdmin(true) : setIsAdmin(false);
+    }, [roomData])
+
+
+    console.log("rd:", roomData)
+
     return (
-        <RoomContext.Provider value={{ errors, roomID, roomData, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
+        <RoomContext.Provider value={{ errors, roomID, roomData, isAdmin, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
             {children}
         </RoomContext.Provider>
     );

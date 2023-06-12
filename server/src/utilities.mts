@@ -127,6 +127,7 @@ export const getRoomMembers = (namespace: Namespace, room: string) => {
             const socket = namespace.sockets.get(sid);
             const data = socket?.handshake?.auth?.data?.user;
             return {
+                id: sid || "not-found",
                 name: data?.name || "Anonymous",
                 image: data?.image || "http://placeholder.co/500/500"
             };
@@ -153,9 +154,18 @@ export const getNewRoomData = async (nsp: Namespace, room: string, redisClient: 
     }
 
     const oldRoomData = JSON.parse(value);
+
+    // check if the admin is still among the members
+    const newMembers = getRoomMembers(nsp, room);
+    let adminID = oldRoomData.admin;
+    const idx = newMembers?.findIndex(member => member.id == adminID)
+    if (idx === undefined || idx === null || idx === -1) {
+        adminID = newMembers ? newMembers[0].id : null;
+    }
+
     const roomData = {
         roomID: oldRoomData.roomID,
-        admin: oldRoomData.admin, 
+        admin: adminID, 
         status: oldRoomData.status, 
         members: getRoomMembers(nsp, room),
         currentQuestion: oldRoomData?.currentQuestion, 

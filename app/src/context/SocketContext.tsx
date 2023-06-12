@@ -18,6 +18,7 @@ export type ConnectedUserType = {
 }
 
 export type UserData = {
+    id?: string | null | undefined;
     name: string;
     image: string;
 }
@@ -69,7 +70,7 @@ interface ClientToServerEvents {
 
     'action:new-room': () => void;
     'action:join-room': (roomID: string) => void;
-    'action:leave-room': (ev: string, roomID: string) => void;
+    'action:leave-room': (roomID: string) => void;
     'action:leave-all-rooms': () => void;
 }
 
