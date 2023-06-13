@@ -28,6 +28,7 @@ const ToggleMatchMaking = () => {
     }, [connectionStatus]);
     return (
         <div className="shadow-xl shadow-black p-8 py-10 flex flex-col justify-between w-full h-full bg-gradient-to-r from-stone-950 to-black rounded-md border-2 border-stone-800">
+            <p>{roomData?.roomID}</p>
             <h1 className="font-poppins font-semibold text-4xl text-stone-300 subpixel-antialiased border-b-2 border-stone-800 w-fit">Matchmacking</h1>
             <div>
             <p className="mt-4 text-xl font-barlow subpixel-antialiased text-stone-400">Randomly connect with members in the pool?</p>

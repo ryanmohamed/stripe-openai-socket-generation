@@ -33,6 +33,7 @@ const Create: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
+
       <main className="page"> 
         <main className="px-10 md:px-20 pb-20">
           <header className="mb-14">

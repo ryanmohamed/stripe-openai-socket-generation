@@ -1,5 +1,6 @@
 import { Namespace, Socket } from "socket.io";
 import { RedisClientType } from "redis";
+type SocketWithSessionID = Socket & { sessionID?: string | null | undefined } 
 
 /*
     Fisher-Yates algorithm to shuffle an array randomly
@@ -83,7 +84,7 @@ export const coreServices = (emitTotalConnections: CallableFunction, socket: Soc
 */
 export const generateRoomId = (namespace: Namespace) => {
     const fn = () => {
-        const alphabet = "0123456789";
+        const alphabet = "123456789";
         let string = "";
         for (let i = 0; i < 6; i++) {
             const idx = Math.floor(Math.random() * alphabet.length)
@@ -117,24 +118,22 @@ export const ackError = (emittingNamespace: Namespace, socketID: string, event: 
     members: { name: string, image: string }[] | undefined | null
 */
 export const getRoomMembers = (namespace: Namespace, room: string) => {
-    if (namespace.adapter.hasOwnProperty("rooms")){
-        const sids = namespace?.adapter?.rooms?.get(room); // Set<string> | undefined
-        // no room found -> no members
-        if (sids === undefined || sids === null) 
-            return null;
+    const sids = namespace.adapter.rooms?.get(room); // Set<string> | undefined
+    // no room found -> no members
+    if (sids === undefined || sids === null) 
+        return null;
 
-        const members = Array.from(sids).map((sid) => {
-            const socket = namespace.sockets.get(sid);
-            const data = socket?.handshake?.auth?.data?.user;
-            return {
-                id: sid || "not-found",
-                name: data?.name || "Anonymous",
-                image: data?.image || "http://placeholder.co/500/500"
-            };
-        });
-        return members;
-    }
-    else return null;
+    const members = Array.from(sids).map((sid) => {
+        const socket: SocketWithSessionID = namespace.sockets.get(sid) as SocketWithSessionID;
+        const data = socket?.handshake?.auth?.data?.user;
+        return {
+            id: socket?.sessionID || "not-found", //
+            name: data?.name || "Anonymous",
+            image: data?.image || "http://placeholder.co/500/500"
+        };
+    });
+
+    return members;
 }
 
 
@@ -202,18 +201,22 @@ export const handleMemberCountChange = async (nsp: Namespace, room: string, redi
         });
 
         // update changer if needed
-        id && nsp.to(id).emit("update:room-count", {
-            data: roomData,
-            status: "ok"
-        });
+        if (id) {
+            const socket: SocketWithSessionID = nsp.sockets.get(id) as SocketWithSessionID;
+            socket && nsp.to(socket?.sessionID || socket.id).emit("update:room-count", {
+                data: roomData,
+                status: "ok"
+            });
+        }
+        
     } 
 }
 
-export const leaveAllRooms = (nsp: Namespace, socket: Socket, redisClient: RedisClientType) => {
+export const leaveAllRooms = (nsp: Namespace, socket: SocketWithSessionID, redisClient: RedisClientType) => {
     const rooms = nsp.adapter.sids.get(socket.id);
     if (rooms) {
         for (let room of Array.from(rooms)){
-            if (room !== socket.id) socket.leave(room);
+            if (room !== socket.id && room !== socket?.sessionID) socket.leave(room);
             handleMemberCountChange(nsp, room, redisClient); // update members of that room as this client leaves TEMPORARY
         }
     }

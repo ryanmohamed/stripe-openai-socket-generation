@@ -69,6 +69,13 @@ export const RoomProvider = ({children}: {
         setIsAdmin(null);
     }
 
+    const handleMatchStart = async (ack: AckType) => {
+        if (ack.status === "ok") {
+            console.log(router)
+            router.push(`/rooms/${ack.data?.roomID}`);
+        }
+    }
+
     useEffect(() => {
         resetRoomContext(); // on socket change
 
@@ -108,14 +115,13 @@ export const RoomProvider = ({children}: {
             socket.on("ack:join-room", handleEnterRoom); // mutates room data and room id
             socket.on("ack:left-room", handleLeaveRoom); // mutates room data and room id
             socket.on("update:room-count", handleRoomUpdate); // mutates room data
-            socket.on("ack:start-match", (ack: AckType) => {
-                router.push("/match");
-            } ); // mutates room data
+            socket.on("ack:start-match", handleMatchStart); // mutates room data
             return () => {
                 socket.off("ack:new-room", handleEnterRoom);
-                socket.off("ack:left-room", handleEnterRoom);
-                socket.off("ack:join-room", handleLeaveRoom);
+                socket.off("ack:left-room", handleLeaveRoom);
+                socket.off("ack:join-room", handleEnterRoom);
                 socket.off("update:room-count", handleRoomUpdate);
+                socket.off("ack:start-match", handleMatchStart); // mutates room data
             };
         } 
     }, [socket]);

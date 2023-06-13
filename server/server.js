@@ -3,13 +3,38 @@ const prisma = new PrismaClient();
 
 import express from "express";
 const app = express();
+app.use(express.json());
 const port = 3001;
+
+// api middleware
+app.use((req, res, next) => {
+    const auth = req.headers.authorization;
+    if (auth === undefined || auth === null) return res.status(401).json({ error: "Missing authorization."});
+    
+    const token = auth.split(" ")[1];
+    if (token === undefined || token === null) return res.status(401).json({ error: "Missing token." });
+    
+    console.log(token);
+    next();
+});
+
+// api routes
+app.get("/api", (req, res) => {
+    console.log(req);
+    return res.status(200).json({ message: "hey there" });
+});
 
 import http from "http";
 const server = http.createServer(app);
 
 import { Namespace, Server } from "socket.io";
 const io = new Server(server, {
+    connectionStateRecovery: {
+        // the backup duration of the sessions and the packets
+        maxDisconnectionDuration: 2 * 60 * 1000,
+        // whether to skip middlewares upon successful recovery
+        skipMiddlewares: false,
+    },
     cors: {
       origin: "http://localhost:3000",
       credentials: true
@@ -59,7 +84,7 @@ redisClient.set("pool", JSON.stringify(initialRoomData));
 
 // middleware to validate incoming session token cookie against values in database
 ansp.use((socket, next) => {
-    console.log(`Socket ${socket.id} attempting to connect to authenticated namespace...`)
+    console.log(`\n\n\n\nSocket ${socket.id} attempting to connect to authenticated namespace...`)
     // full-stack app appends cookies to client requests
     const cookies = socket.request.headers?.cookie?.split('; ');
     const sessionTokenCookie = cookies.find(cookie => cookie.startsWith('next-auth.session-token='));
@@ -81,6 +106,8 @@ ansp.use((socket, next) => {
         else if (isExpired) return next(new Error(`Session token is expired.`));
         else {
             console.log(`Found valid session token: ${session.sessionToken}\n`);
+            const { id } = session;
+            socket.sessionID = id;
             next(); // proceed 
         }
     })
@@ -93,15 +120,15 @@ ansp.use((socket, next) => {
 ansp.on('connection', (socket) => {
     const emitTotalConnections = () => emitConnectionCount([pnsp, ansp], ansp);
     coreServices(emitTotalConnections, socket);
-    console.log(`\nNew private connection: ${socket.id}!\n`);
-    //socket.join("pool");
+    console.log(`\n\nNew private connection: ${socket.id}!\n\n`);
+    socket.join(socket.sessionID); // gurantee of addition is made by middleware
 
     // client explicity asks for a rooms count (i.e on mount)
     socket.on("get:room-count", async (room) => {
         // update requesters count only
         // changes to the members array are sent to entire room via callbacks 
         const roomData = await getNewRoomData(ansp, room, redisClient);
-        ansp.to(socket.id).emit("ack:room-count", {
+        ansp.to(socket.sessionID || socket.id).emit("ack:room-count", {
             data: roomData,
             status: "ok"
         });
@@ -112,9 +139,9 @@ ansp.on('connection', (socket) => {
         const data = socket.handshake?.auth?.data?.user
         const rooms = ansp.adapter.rooms; 
         if (rooms.size === 1000000)
-            ackError(ansp, socket.id, "ack:new-room", "Too many active rooms.");
+            ackError(ansp, socket.sessionID, "ack:new-room", "Too many active rooms.");
         else if (!data) 
-            ackError(ansp, socket.id, "ack:new-room", "Connecting user has no session data.");
+            ackError(ansp, socket.sessionID, "ack:new-room", "Connecting user has no session data.");
 
         else {
             const roomID = generateRoomId(ansp);
@@ -124,7 +151,7 @@ ansp.on('connection', (socket) => {
             socket.join(roomID);
 
             const members = [{
-                id: socket.id,
+                id: socket.sessionID, // memberhood based on session, allows seperate tabs and clean secured checks of authenticity by web server
                 name: data?.name || "Anonymous",
                 image: data?.image || "http://placeholder.co/500/500"
             }];
@@ -132,7 +159,7 @@ ansp.on('connection', (socket) => {
             // data created
             const roomData = {
                 roomID: roomID, // string
-                admin: socket.id, // string
+                admin: socket.sessionID, // string
                 status: "waiting", // "waiting" | "ready",
                 members: members, // // { name: string, image: string }[],
                 currentQuestion: null, 
@@ -145,7 +172,7 @@ ansp.on('connection', (socket) => {
             const response = await redisClient.set(roomID, roomDataString);
 
             if (response) {
-                ansp.to(socket.id).emit("ack:new-room", {
+                ansp.to(socket.sessionID).emit("ack:new-room", {
                     data: roomData,
                     status: "ok"
                 }); // emit to requester
@@ -159,21 +186,25 @@ ansp.on('connection', (socket) => {
 
         // if recieved non string or non 6 digit string
         if  (typeof roomID !== "string" || (!roomID.match(/^\d{6}$/) && roomID !== "pool")) {
-            ackError(ansp, socket.id, "ack:join-room", "Bad room ID.");
+            ackError(ansp, socket.sessionID, "ack:join-room", "Bad room ID.");
         }
 
         // room doesn't exist
         else if (roomID !== "pool" && rooms.get(roomID) === undefined || rooms.get(roomID) === null){
-            ackError(ansp, socket.id, "ack:join-room", "Room doesn't exist.");
+            ackError(ansp, socket.sessionID, "ack:join-room", "Room doesn't exist.");
         }
         
         // create room, store user information in map 
         else {  
+            const roomDataString = await redisClient.get(roomID);
+            const oldRoomData = JSON.parse(roomDataString || "null");
+            if (oldRoomData.status === "ready") return ackError(ansp, socket.sessionID, "ack:join-room", "Could not join. Room in progress.");
+
             leaveAllRooms(ansp, socket, redisClient);
             socket.join(roomID); // create-room called as side-effect  
             // ack:join-room and ack:create-room update the clients room information, so we can't simply propogate change alone
             const roomData = await getNewRoomData(ansp, roomID, redisClient);
-            ansp.to(socket.id).emit("ack:join-room", {
+            ansp.to(socket.sessionID).emit("ack:join-room", {
                 data: roomData,
                 status: "ok" 
             });
@@ -189,7 +220,7 @@ ansp.on('connection', (socket) => {
         const doesNotIncludeClient = !rooms?.get(roomID)?.has(socket.id);
         
         if (notValidID || doesNotExist || doesNotIncludeClient) {
-            ansp.to(socket.id).emit("ack:left-room", {
+            ansp.to(socket.sessionID).emit("ack:left-room", {
                 data: null,
                 status: "error"
             });
@@ -197,9 +228,10 @@ ansp.on('connection', (socket) => {
         
         // remove socket
         else {  
+
             socket.leave(roomID); // leave-room called as side-effect
             const roomData = await getNewRoomData(ansp, roomID, redisClient);
-            ansp.to(socket.id).emit("ack:left-room", {
+            ansp.to(socket.sessionID).emit("ack:left-room", {
                 data: roomData,
                 status: "ok" 
             });
@@ -207,11 +239,11 @@ ansp.on('connection', (socket) => {
     });
 
     socket.on("action:start-match", async (roomID) => {
-        if(!isInRoom(ansp, socket, roomID)) return ackError(ansp, socket.id, "action:start-match", "Not in room.");
+        if(!isInRoom(ansp, socket, roomID)) return ackError(ansp, socket.sessionID, "action:start-match", "Not in room.");
         const roomDataString = await redisClient.get(roomID);
         const roomData = JSON.parse(roomDataString || "null");
-        if(!roomData) return ackError(ansp, socket.id, "action:start-match", "No room data found.");
-        if(roomData?.admin !== socket.id) return ackError(ansp, socket.id, "action:start-match", "Not an admin for this room.");
+        if(!roomData) return ackError(ansp, socket.sessionID, "action:start-match", "No room data found.");
+        if(roomData?.admin !== socket.sessionID) return ackError(ansp, socket.sessionID, "action:start-match", "Not an admin for this room.");
         
         const newRoomData = {
             roomID: roomData?.roomID || roomID,
@@ -222,7 +254,7 @@ ansp.on('connection', (socket) => {
         }; 
         const newRoomDataString = JSON.stringify(newRoomData);
         const status = await redisClient.set(roomID, newRoomDataString);
-        if (!status) return ackError(ansp, socket.id, "action:start-match", "Error occured updating room.");
+        if (!status) return ackError(ansp, socket.sessionID, "action:start-match", "Error occured updating room.");
         ansp.to(roomID).emit("ack:start-match", {
             data: newRoomData,
             status: "ok"

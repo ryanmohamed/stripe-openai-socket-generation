@@ -114,7 +114,7 @@ export const SocketProvider = ({children}: {
     const { data: session } = useSession();
     const [ connectionStatus, setConnectionStatus ] = useState<"connect" | "disconnect" | "error">("disconnect");
     const [ count, setCount ] = useState<number>(0);
-
+    
     const handleConnect = () => {
         console.log("Handling connection");
         setConnectionStatus("connect");
