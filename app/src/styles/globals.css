@@ -71,6 +71,9 @@
     .h {
       @apply text-zinc-100 underline font-semibold subpixel-antialiased;
     }
+    .btn {
+      @apply flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-red-800 hover:bg-red-600 transition-colors;
+    }
   }
   
 @layer utilities {
@@ -91,6 +94,9 @@
     .no-scrollbar {
       -ms-overflow-style: none; /* IE and Edge */
       scrollbar-width: none; /* Firefox */
+    }
+    .screen-h-wo-nav {
+      height: calc(100vh - 48px);
     }
 }
 

@@ -71,8 +71,8 @@ export const RoomProvider = ({children}: {
 
     const handleMatchStart = async (ack: AckType) => {
         if (ack.status === "ok") {
-            console.log(router)
-            router.push(`/rooms/${ack.data?.roomID}`);
+            await router.push(`/rooms/${ack.data?.roomID}`);
+            setRoomData(ack?.data);
         }
     }
 
@@ -138,6 +138,7 @@ export const RoomProvider = ({children}: {
     }, [connectionStatus]);
 
     useEffect(() => {
+        
         (roomData && roomData.admin === socket?.id) ? setIsAdmin(true) : setIsAdmin(false);
     }, [roomData])
 

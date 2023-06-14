@@ -6,24 +6,6 @@ const app = express();
 app.use(express.json());
 const port = 3001;
 
-// api middleware
-app.use((req, res, next) => {
-    const auth = req.headers.authorization;
-    if (auth === undefined || auth === null) return res.status(401).json({ error: "Missing authorization."});
-    
-    const token = auth.split(" ")[1];
-    if (token === undefined || token === null) return res.status(401).json({ error: "Missing token." });
-    
-    console.log(token);
-    next();
-});
-
-// api routes
-app.get("/api", (req, res) => {
-    console.log(req);
-    return res.status(200).json({ message: "hey there" });
-});
-
 import http from "http";
 const server = http.createServer(app);
 
@@ -65,6 +47,42 @@ import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePool
 
 const pnsp = io.of('/');
 const ansp = io.of('/authenticated');
+
+// api middleware
+app.use(async (req, res, next) => {
+    console.log("\n\n\n\n\nREST API\n\n\n\n");
+    const sessionToken = req.headers["x-session-token-cookie"];
+    const serverToken = req.headers.authorization?.split(" ")[1];
+    if (serverToken === undefined || serverToken === null) return res.status(401).json({ error: "Missing token." });
+    if (sessionToken === undefined || sessionToken === null) return res.status(401).json({ error: "Missing session token."});
+
+    const session = await prisma.session.findUnique({ where: { sessionToken: sessionToken } })
+    if(session === null || session === undefined) return res.status(401).json({ error: "User isn't authenticated." });
+    
+    const sessionID = session.id;   // valid user, now check room
+    const room = req.query?.room;
+    if (room === null || room === undefined || !room.match(/^\d{6}$/)) return res.status(401).json({ error: "No room provided or room id is invalid."});
+    
+    const roomDataString = await redisClient.get(room);
+    const roomData = JSON.parse(roomDataString || "null");
+    if (roomData === null || roomData === undefined) return res.status(404).json({ error: "Room not found."});
+
+    const members = roomData?.members;
+    if (members === null || members === undefined || members?.length === 0) return res.status(404).json({ error: "No users in room."});
+    const idx = members?.findIndex(member => member.id === sessionID);
+    if(idx === null || idx === undefined || idx === -1) return res.status(403).json({ error: "Did not find user among members."});
+
+    if(roomData?.status !== "ready") return res.status(403).json({ error: "Room match hasn't started."});
+
+
+    next();
+});
+
+// api routes
+app.get("/api", (req, res) => {
+    console.log("\n\n\n\n headers", req.headers);
+    return res.status(200).json({ message: "hey there" });
+});
 
 // public namespace only responsible for read only information for all clients 
 pnsp.on("connection", (socket) => {
@@ -159,7 +177,7 @@ ansp.on('connection', (socket) => {
             // data created
             const roomData = {
                 roomID: roomID, // string
-                admin: socket.sessionID, // string
+                admin: socket.id, // string
                 status: "waiting", // "waiting" | "ready",
                 members: members, // // { name: string, image: string }[],
                 currentQuestion: null, 
@@ -243,7 +261,7 @@ ansp.on('connection', (socket) => {
         const roomDataString = await redisClient.get(roomID);
         const roomData = JSON.parse(roomDataString || "null");
         if(!roomData) return ackError(ansp, socket.sessionID, "action:start-match", "No room data found.");
-        if(roomData?.admin !== socket.sessionID) return ackError(ansp, socket.sessionID, "action:start-match", "Not an admin for this room.");
+        if(roomData?.admin !== socket.id) return ackError(ansp, socket.sessionID, "action:start-match", "Not an admin for this room.");
         
         const newRoomData = {
             roomID: roomData?.roomID || roomID,

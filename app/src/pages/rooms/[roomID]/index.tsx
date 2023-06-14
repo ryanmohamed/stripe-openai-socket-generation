@@ -3,18 +3,27 @@ import Head from "next/head";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import useRoomContext from "@/hooks/useRoomContext";
+import MemberLink from "@/components/server/MemberLink";
+import { UserData } from "@/context/SocketContext";
+import { useEffect, Key } from "react";
+import Question from "@/components/client/Question";
 
 const Room: NextPage = () => {
   // redirect users without a session
   const router = useRouter();
   const { roomData } = useRoomContext();
-  const { status } = useSession({
+  const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       router.push("/");
-    }
+    },
   });
 
+  useEffect(() => {
+    if (roomData?.roomID !== router.query.roomID)
+      router.push("/rooms");
+  }, [roomData?.roomID]);
+  
   if ( status === "loading" ) {
     return <>Loading...</>; 
   }
@@ -22,7 +31,7 @@ const Room: NextPage = () => {
   if ( roomData?.roomID !== router.query.roomID ) {
     return <>Not Authorized</>
   }
-  
+
   return (
     <>
       <Head>
@@ -31,8 +40,44 @@ const Room: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="page">
-        <h1>Room {router.query.roomID}</h1>
+      <main className="page md:screen-h-wo-nav w-full md:grid grid-cols-12 grid-rows-3">
+        <div className="row-span-2 col-start-0 col-span-3 p-4 bg-red-900">
+          <h1 className="font-bold">Room {router.query.roomID}</h1>
+          <p className="">Status: <span className="font-bold underline capitalize">{roomData?.status}</span></p>
+          <ul className="mt-6 list-none">
+            <p className="mb-4 border-b-2 border-stone-800 text-green-700 font-bold">Room Members</p>
+            <div className="flex md:flex-col">
+              { roomData?.members && roomData.members?.map((member: UserData, key: Key) => (
+                  <li><MemberLink key={key} name={member.name} src={member.image} /></li>
+              ))}
+            </div>
+          </ul>
+        </div>
+
+        <div className="col-start-4 col-span-9 row-span-2 p-10 py-20 md:py-10 h-auto centered">
+          <Question num={1} question={{
+            prompt: "You come home to this, what do you do first?",
+            info: {
+              type: "mc",
+              options: ["Burst into rage 🤬", "Join in 😁", "Calm Discipline 🥺", "Go for a walk 🦮"]
+            },
+            image: {
+              src: "https://image.petmd.com/files/styles/978x550/public/2023-04/dog-chewing-furniture.jpg",
+              alt: "image dog destroys something after being left home home"
+            }
+          }}/>
+        </div>
+
+        <div className="flex flex-col-reverse md:flex-row col-span-12 row-start-3 screen-h-wo-nav md:h-full md:min-h-full w-full bg-black">
+          <div className="h-4/5 md:h-full md:w-2/3 flex pb-10">
+            <form className="self-end flex-grow flex items-end px-10">
+              <img className="w-10 h-10 rounded-full" src={session?.user?.image || "http://placeholder.co/500/500"} alt="user img" />
+              <input className="mx-4 flex-grow p-2 h-12 outline-none border-b-2 border-stone-800 bg-transparent font-poppins text-stone-300 transition" type="text" placeholder="Send a message..." />
+              <button className="h-10 p-3 centered rounded-lg font-bold text-stone-300 subpixel-antialiased bg-green-700 hover:bg-green-500 transition">Send</button>
+            </form>
+          </div>
+          <div className="flex-grow min-h-1/5 md:w-1/3 bg-blue-700"></div>
+        </div>
       </main>
     </>
   );

@@ -140,7 +140,36 @@ Add dependency to Node
 
 <!-- ![room page example](https://i.ibb.co/kM002T1/Screen-Shot-2023-06-10-at-1-46-08-AM.png)
 ![room connection example](https://i.ibb.co/7rWJKfX/Screen-Shot-2023-06-10-at-1-50-24-AM.png) -->
+---
+## Handling authorization for dynamic room routes 
+Naturally we'd need to make dynamic room routes that members of each `Room` can join into such as `localhost:3000/rooms/123456`. On the other side of the coin are users attempting to navigate to that dynamic route without the necessary authentications. For example: 
+1. No session. Not signed in.
+2. Client not connected to socket server.
+3. Client doesn't belong to that room. 
+4. Room is not in progress yet. 
+5. Room doesn't exist. 
+6. Room ID is invalid (`localhost:3000/rooms/123456`)
 
+So how do we securely handle the validation of the previous factors? Do we use a **server-to-server socket connection** to securely communicate information about the requesting client? Some cons with this come with the **message passing** systems. If we want to validate the user's ability to navigate to this dynamic subroute we need that information to flow extremely fast and follow a predictable, sequential order. Validation has to be performed as middleware when the client requests the web servers for `localhost:3000/rooms/123456`, so it'd follow best practice to have a sequential flow of logic rather than update variables with socket listeners. 
 
-### To Do:
-1. Handle socket disconnections, when the server abruptly shuts down the rooms in progress should be 
+Instead we opt with the traditional REST API approach for **inter-server communication**. Besides the previous claims, the reasons for this are as follows:
+1. Headers encrypted as data flows between servers, more security than exposed socket connections. 
+2. Predictable and error handling friendly. 
+3. CORS, easily specify the socket server can only recieve HTTP requests from web server IP. 
+4. Friendly syntax to pass data like room id through query parameters, and secure headers to pass tokens and cookies. 
+
+## Refactor decision: Session-ID based socket identification.
+For the purposes of supporting reload persistence in the future and claims made on Socket.IO about the `socket.id` attribute, the most stable and general way to identify a unique authenticated socket connection is through it's `Session-ID`. Meaning a user that is signed in on different tabs will have the same experiences and room connections. Session ID is stored in the Postgres database. 
+
+So how do we figure out what user the web server is trying to validate?
+Because `next-auth` attaches a session token cookie to all client requests, we can pull that out on the web server side and pass it along in secured headers to the socket server. 
+
+## Logs
+1. Refactored socket code to be session based rather than socket.id based.
+2. Created Next.js middleware `middleware.ts` that matches all routes `/rooms:path*`.
+3. Middleware extracts `sessionToken` and sends it as a header in a GET request to the socket server. Request also given serverToken to authenticate connection. 
+4. Created middleware for API in socket server. 
+5. Uses incoming sessionToken to query Postgres and find matching sessionID.
+6. Performs validation against namespace information, sends 200 on success. 
+7. Next.js middleware redirects on failures and allows connections to `/rooms/123456` when socket-server responds with 200 and allows request to proceed. 
+8. Overall bug fixes and optimizations. 

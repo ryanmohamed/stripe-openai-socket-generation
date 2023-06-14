@@ -1,7 +1,18 @@
-GET http://localhost:3001/ HTTP/1.1
+GET http://localhost:3001/api?room=976174 HTTP/1.1
 content-type: application/json
 Authorization: Bearer xxx
+x-session-token-cookie: f836cd0b-2a4b-478f-9064-09c1c38ae7f3
 
 {
-    "
+    
 }
+
+GET http://localhost:3001/api?room=142729 HTTP/1.1
+content-type: application/json
+Authorization: Bearer xxx
+x-session-token-cookie: 2fc41bb8-3473-4ae0-9b05-6661f6fc234f
+
+{
+    
+}
+

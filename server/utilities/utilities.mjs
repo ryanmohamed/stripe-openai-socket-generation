@@ -135,18 +135,18 @@ export const getNewRoomData = async (nsp, room, redisClient) => {
         return null;
     }
     const oldRoomData = JSON.parse(value);
+    let adminID = oldRoomData.admin;
     // check if the admin is still among the members
     const newMembers = getRoomMembers(nsp, room);
-    let adminID = oldRoomData.admin;
-    const idx = newMembers?.findIndex(member => member.id == adminID);
-    if (idx === undefined || idx === null || idx === -1) {
-        adminID = newMembers ? newMembers[0].id : null;
+    const sids = nsp.adapter.rooms.get(room);
+    if (sids && !sids.has(adminID)) {
+        adminID = sids ? Array.from(sids)[0] : null;
     }
     const roomData = {
         roomID: oldRoomData.roomID,
         admin: adminID,
         status: oldRoomData.status,
-        members: getRoomMembers(nsp, room),
+        members: newMembers,
         currentQuestion: oldRoomData?.currentQuestion,
     };
     const newRoomDataString = JSON.stringify(roomData);

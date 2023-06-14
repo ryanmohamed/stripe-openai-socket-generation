@@ -5,6 +5,7 @@ import MemberLink from "../server/MemberLink";
 import Crown from "../svg/Crown";
 
 import useSocketContext from "@/hooks/useSocketContext";
+import Link from "next/link";
 
 const RoomStartup = ({roomID }: { roomID: RoomIDType }) => {
     const { socket } = useSocketContext();
@@ -30,7 +31,10 @@ const RoomStartup = ({roomID }: { roomID: RoomIDType }) => {
                         ))}
                     </div>
                     <div className="flex flex-col w-full">
-                        { (isAdmin && roomData && roomData?.members?.length > 1) && <button onClick={handleStart} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4" type="button">Start match</button>}
+                        {/* todo: make sure the verification of it being >= 2 members happens server side! */}
+                        { roomData?.status === "ready" ? <Link href={`/rooms/${roomData?.roomID}`} className="flex-grow h-12 p-2 rounded-md text-lg text-center font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4">Return to match</Link> : (isAdmin && roomData && roomData?.members?.length > 0) ? <button onClick={handleStart} className="flex-grow h-12 p-2 rounded-md text-center text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4" type="button">Start match</button> : null}
+                        {/* { (isAdmin && roomData && roomData?.members?.length > 1) && <button onClick={handleStart} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4" type="button">Start match</button>}
+                        { (roomData && roomData.status === "ready") && <button onClick={handleStart} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-green-800 hover:bg-green-600 transition-colors mb-4" type="button">Start match</button>} */}
                         <button onClick={handleLeave} className="flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-red-800 hover:bg-red-600 transition-colors" type="button">Leave Room</button>
                     </div>
                 </div>
