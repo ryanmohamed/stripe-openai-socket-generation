@@ -12,12 +12,37 @@ export type UserData = {
     image: string;
 }
 
+export type ImageInfo = {
+    src: string,
+    alt: string
+}
+
+export type MultipleChoiceType = {
+    type: "mc",
+    options: [string, string, string, string],
+}
+
+export type ShortAnswerType = {
+    type: "short"
+}
+
+export type SelectType = {
+    type: "select",
+    options: [string, string, string, string],
+}
+
+export type QuestionType = {
+    prompt: string,
+    info: MultipleChoiceType | ShortAnswerType | SelectType
+    image?: ImageInfo;
+}
+
 export type RoomDataType = {
     roomID: RoomIDType,
     admin: string | null,
     status: "waiting" | "ready",
     members: UserData[] | [],
-    currentQuestion: null, // todo
+    currentQuestion: QuestionType | null, 
 } | null;
 
 export type RoomContextType = { 
@@ -76,6 +101,19 @@ export const RoomProvider = ({children}: {
         }
     }
 
+    const handleAnswerQuestion = async (ack: AckType) => {
+        if (ack.status === "ok") {
+            setRoomData(ack?.data);
+        }
+    }
+
+    const handleMatchOver = async (ack: AckType) => {
+        if (ack.status === "ok") {
+            await router.push(`/rooms/foo`);
+            setRoomData(ack?.data);
+        }
+    }
+
     useEffect(() => {
         resetRoomContext(); // on socket change
 
@@ -116,12 +154,16 @@ export const RoomProvider = ({children}: {
             socket.on("ack:left-room", handleLeaveRoom); // mutates room data and room id
             socket.on("update:room-count", handleRoomUpdate); // mutates room data
             socket.on("ack:start-match", handleMatchStart); // mutates room data
+            socket.on("ack:answer-question", handleAnswerQuestion);
+            socket.on("ack:finish-match", handleMatchOver);
             return () => {
                 socket.off("ack:new-room", handleEnterRoom);
                 socket.off("ack:left-room", handleLeaveRoom);
                 socket.off("ack:join-room", handleEnterRoom);
                 socket.off("update:room-count", handleRoomUpdate);
                 socket.off("ack:start-match", handleMatchStart); // mutates room data
+                socket.on("ack:answer-question", handleAnswerQuestion);
+                socket.off("ack:finish-match", handleMatchOver);
             };
         } 
     }, [socket]);

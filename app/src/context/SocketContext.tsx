@@ -28,9 +28,10 @@ type CountType = number;
 
 export type RoomData = {
     roomID: RoomId,
+    admin: string | null,
     status: "waiting" | "ready",
     members: UserData[],
-    currentQuestion: null, // todo
+    currentQuestion: any, // todo
 }
 
 export type RoomCountUpdate = {
@@ -59,6 +60,8 @@ interface ServerToClientEvents {
     "leave-all-rooms": (ack: AckType) => void;
 
     "ack:start-match": (ack: AckType) => void;
+    "ack:answer-question": (ack: AckType) => void;
+    "ack:finish-match": (ack: AckType) => void;
 }
 
 type ConnectionCount = {
@@ -76,6 +79,7 @@ interface ClientToServerEvents {
     'action:leave-all-rooms': () => void;
 
     'action:start-match': (roomID: string) => void;
+    "action:answer-question": (answer: string | number) => void;
 }
 
 interface InterServerEvents {

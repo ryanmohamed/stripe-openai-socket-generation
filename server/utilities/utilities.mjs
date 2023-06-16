@@ -208,3 +208,14 @@ export const isInRoom = (nsp, socket, room) => {
         return true;
     return false;
 };
+/*
+    Used exclusively for client created rooms and the pool
+*/
+export const getCurrentRoom = (socket) => {
+    const rooms = socket.rooms;
+    for (let room of Array.from(rooms)) {
+        if (room.match(/^\d{6}$/) || room === "pool")
+            return room;
+    }
+    return null;
+};
