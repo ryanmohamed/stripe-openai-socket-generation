@@ -9,10 +9,6 @@ import ActiveUsers from "@/components/server/ActiveUsers";
 import Pricing from "@/components/server/Pricing";
 import Footer from "@/components/server/Footer";
 
-import { useContext } from "react";
-import { SocketContext } from "@/context/SocketContext";
-import Button from "@/components/Button";
-
 const AuthContainer = () => {
   const hello = api.example.hello.useQuery({ text: "from tRPC" });
   

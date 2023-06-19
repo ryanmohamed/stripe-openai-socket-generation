@@ -26,8 +26,6 @@ type QuestionType = {
     image?: ImageInfo;
 }
 
-
-
 const MCForm = ({ info }: { info: MultipleChoiceType }) => {
     const [answer, setAnswer] = useState<number | null>(null);
     const { socket } = useSocketContext();
@@ -44,7 +42,7 @@ const MCForm = ({ info }: { info: MultipleChoiceType }) => {
             <div className="self-center flex flex-col md:grid grid-cols-2 grid-rows-2 gap-2 w-full">
             { info.options.map((option: string, idx: number) => (
                 <label htmlFor={`option${idx + 1}`} className="flex-grow mb-2 md:mb-0 px-4 py-2 rounded-full hover:cursor-pointer border-2 border-indigo-800 bg-stone-950 hover:scale-105 transition">
-                    <input onChange={handleChange} type="radio" id={`option${idx + 1}`} name="option" value={option} />
+                    <input onChange={handleChange} type="radio" id={`option${idx + 1}`} name="option" value={option} defaultChecked={false} />
                     <span className="cursor-pointer ml-2 text-base whitespace-nowrap font-sans font-light text-stone-300 subpixel-antialiased">{option}</span>
                 </label>
             )) }
@@ -73,7 +71,7 @@ const SelectForm = ({ info }: { info: SelectType }) => {
             <div className="self-center flex flex-col md:grid grid-cols-2 grid-rows-2 gap-2 w-full">
             { info.options.map((option: string, idx: number) => (
                 <label htmlFor={`option${idx}`} className="flex-grow mb-2 md:mb-0 px-4 py-2 rounded-full hover:cursor-pointer border-2 border-indigo-800 bg-stone-950 hover:scale-105 transition">
-                    <input onChange={handleChange} type="checkbox" id={`option${idx}`} name={`option`} value={option} />
+                    <input onChange={handleChange} type="checkbox" id={`option${idx}`} name={`option`} value={option} defaultChecked={false}/>
                     <span className="cursor-pointer ml-2 text-base whitespace-nowrap font-sans font-light text-stone-300 subpixel-antialiased">{option}</span>
                 </label>
             )) }
@@ -98,16 +96,16 @@ const ShortAnswerForm = () => {
         <form onSubmit={handleSubmit} className="self-center flex flex-col w-full h-auto">
             <div className="mt-4 self-center w-full">
                 <label htmlFor="short-answer" className="font-poppins text-white text-base">
-                    Enter your answer below:
-                    <input 
-                        className="my-2 w-full h-12 text-center rounded-full text-lg text-stone-950"
-                        onChange={handleChange} 
-                        type="text" 
-                        id="short-answer" 
-                        name="short-answer" 
-                        placeholder="(e.g: Fluffy)" 
-                    />
+                    Enter your answer:
                 </label>
+                <input 
+                    className="my-2 w-full h-12 text-center rounded-full text-lg text-stone-950"
+                    onChange={handleChange} 
+                    type="text" 
+                    id="short-answer" 
+                    name="short-answer" 
+                    placeholder="(e.g: Fluffy)" 
+                />
             </div>
             <button className="btn flex-grow mt-2 rounded-full bg-green-700 hover:bg-green-500" type="submit">Answer question</button>
         </form>
@@ -115,7 +113,7 @@ const ShortAnswerForm = () => {
 }
 
 const Question = ({ num, question }: {
-    num: number,
+    num: number | null | undefined,
     question: QuestionType
 }) => {
     return (

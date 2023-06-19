@@ -74,6 +74,15 @@
     .btn {
       @apply flex-grow h-12 p-2 rounded-md text-lg font-poppins font-semibold text-stone-300 bg-red-800 hover:bg-red-600 transition-colors;
     }
+    .msg {
+      @apply flex break-all max-w-[60%] mb-3;
+    }
+    .msg-from {
+      @apply msg flex-row self-start;
+    }
+    .msg-to {
+      @apply msg flex-row-reverse self-end;
+    }
   }
   
 @layer utilities {
@@ -98,9 +107,21 @@
     .screen-h-wo-nav {
       height: calc(100vh - 48px);
     }
+    .msg-scroll {
+      white-space:nowrap;
+      overflow: scroll;
+      -webkit-overflow-scrolling: touch;
+    }
+    .msg-to p {
+      background-color: rgb(30, 64, 200);
+    }
+    .msg-from p {
+      background-color: rgb(41, 37, 36);
+    }
 }
 
 html, body {
+  scroll-behavior: smooth;
   overflow-x: hidden;
   background: black;
 }

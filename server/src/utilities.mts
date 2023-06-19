@@ -168,6 +168,7 @@ export const getNewRoomData = async (nsp: Namespace, room: string, redisClient: 
         status: oldRoomData.status, 
         members: newMembers,
         currentQuestion: oldRoomData?.currentQuestion, 
+        questionNum: oldRoomData?.questionNum
     }; 
     const newRoomDataString = JSON.stringify(roomData);
     const response = await redisClient.set(room, newRoomDataString);
@@ -243,3 +244,17 @@ export const getCurrentRoom = (socket: Socket) => {
     }
     return null;
 }
+
+/* ✅ Tested */
+export const isValidRoomID = (roomID: string) => {
+    if (roomID === null || roomID === undefined || !roomID.match(/^\d{6}$/))
+        return false; // invalid format
+    return true;
+}
+
+export const roomExists = (nsp: Namespace, roomID: string) => {
+    const room = nsp.adapter.rooms.get(roomID);
+    if (room === null || room === undefined) return false;
+    return true;
+}
+

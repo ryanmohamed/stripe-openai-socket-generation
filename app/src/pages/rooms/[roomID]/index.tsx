@@ -5,19 +5,25 @@ import { useRouter } from "next/router";
 import useRoomContext from "@/hooks/useRoomContext";
 import MemberLink from "@/components/server/MemberLink";
 import { UserData } from "@/context/SocketContext";
-import { useEffect, Key } from "react";
+import { useEffect, Key, MouseEventHandler, FormEventHandler } from "react";
 import Question from "@/components/client/Question";
+import Chatroom from "@/components/client/Chatroom";
 
 const Room: NextPage = () => {
   // redirect users without a session
   const router = useRouter();
-  const { roomData } = useRoomContext();
+  const { roomData, leaveRoom, sendMessage } = useRoomContext();
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       router.push("/");
     },
   });
+
+  const handleLeave: MouseEventHandler = (event) => {
+    event.preventDefault();
+    leaveRoom && leaveRoom();
+  }
 
   useEffect(() => {
     if (roomData?.roomID !== router.query.roomID)
@@ -41,32 +47,31 @@ const Room: NextPage = () => {
       </Head>
 
       <main className="page md:screen-h-wo-nav w-full md:grid grid-cols-12 grid-rows-3">
-        <div className="row-span-2 col-start-0 col-span-3 p-4 bg-black md:border-r-2 border-stone-800">
-          <h1 className="font-bold">Room {router.query.roomID}</h1>
-          <p className="">Status: <span className="font-bold underline capitalize">{roomData?.status}</span></p>
-          <ul className="mt-6 list-none">
-            <p className="mb-4 border-b-2 border-stone-800 text-green-700 font-bold">Room Members</p>
-            <div className="flex md:flex-col">
-              { roomData?.members && roomData.members?.map((member: UserData, key: Key) => (
-                  <li><MemberLink key={key} name={member.name} src={member.image} /></li>
-              ))}
-            </div>
-          </ul>
+        <div className="flex flex-col justify-between row-span-2 col-start-0 col-span-3 p-4 bg-black md:border-r-2 border-stone-800">
+          <div>
+            <h1 className="font-bold">Room {router.query.roomID}</h1>
+            <p className="">Status: <span className="font-bold underline capitalize">{roomData?.status}</span></p>
+            <ul className="mt-6 list-none">
+              <p className="mb-4 border-b-2 border-stone-800 text-green-700 font-bold">Room Members</p>
+              <div className="flex md:flex-col">
+                { roomData?.members && roomData.members?.map((member: UserData, key: Key) => (
+                    <li><MemberLink key={key} name={member.name} src={member.image} /></li>
+                ))}
+              </div>
+            </ul>
+          </div>
+          <div className="mt-6 flex max-w-[40%] md:max-w-full md:w-full self-end">
+            <button className="btn h-8 centered text-sm font-barlow flex-grow-0 md:flex-grow" onClick={handleLeave}>Leave room</button>
+          </div>
         </div>
 
         <div className="col-start-4 col-span-9 row-span-2 p-10 py-20 md:py-10 h-auto centered">
-          { roomData?.currentQuestion && <Question num={1} question={roomData?.currentQuestion}/> }
+          { roomData?.currentQuestion && <Question num={roomData?.questionNum+1} question={roomData?.currentQuestion}/> }
         </div>
 
         <div className="col-start-9 col-span-4 row-start-3 h-[15vh] md:h-full bg-black border-t-2 border-stone-800"></div>
 
-        <div className="col-span-8 row-start-3 flex pb-10 h-[80vh] md:h-full bg-black border-t-2 md:border-r-2 border-stone-800">
-          <form className="self-end flex-grow flex items-end px-10">
-            <img className="w-10 h-10 rounded-full" src={session?.user?.image || "http://placeholder.co/500/500"} alt="user img" />
-            <input className="mx-4 flex-grow p-2 h-12 outline-none border-b-2 border-stone-800 bg-transparent font-poppins text-stone-300 transition" type="text" placeholder="Send a message..." />
-            <button className="h-10 p-3 centered rounded-lg font-bold text-stone-300 subpixel-antialiased bg-green-700 hover:bg-green-500 transition">Send</button>
-          </form>
-        </div>
+        <Chatroom />
         
       </main>
     </>

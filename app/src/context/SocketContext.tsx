@@ -7,7 +7,7 @@ const publicURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http://
 const privateURL: string = process.env.NODE_ENV === 'production' ? "/" : 'http://localhost:3001/authenticated';
 
 export type AckType = {
-    data: ConnectedUserType[] | CountType | RoomData | UserData[] | RoomCountUpdate | null | any;
+    data: ConnectedUserType[] | CountType | RoomData | UserData[] | RoomCountUpdate | MessageData | null | any;
     status: "ok" | "error";
     errorMessage?: string | null | undefined;
 }
@@ -32,6 +32,7 @@ export type RoomData = {
     status: "waiting" | "ready",
     members: UserData[],
     currentQuestion: any, // todo
+    questionNum?: number
 }
 
 export type RoomCountUpdate = {
@@ -39,6 +40,10 @@ export type RoomCountUpdate = {
     room: string
 }
 
+export type MessageData = {
+    message: string,
+    sender: UserData
+}
 
 // "Types for the client"
 interface ServerToClientEvents {
@@ -62,6 +67,8 @@ interface ServerToClientEvents {
     "ack:start-match": (ack: AckType) => void;
     "ack:answer-question": (ack: AckType) => void;
     "ack:finish-match": (ack: AckType) => void;
+
+    "ack:send-message": (ack: AckType) => void;
 }
 
 type ConnectionCount = {
@@ -80,6 +87,8 @@ interface ClientToServerEvents {
 
     'action:start-match': (roomID: string) => void;
     "action:answer-question": (answer: string | number) => void;
+
+    "action:send-message": (roomID: string | null | undefined, message: string) => void;
 }
 
 interface InterServerEvents {

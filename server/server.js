@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 const port = 3001;
 
-import http from "http";
+import http, { get } from "http";
 const server = http.createServer(app);
 
 import { Namespace, Server } from "socket.io";
@@ -43,7 +43,7 @@ redisClient.on('error', () => {
     console.log("Error connecting to Redis.\n\n");
 })
 
-import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms, getNewRoomData, isInRoom, getCurrentRoom } from "./utilities/utilities.mjs";
+import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms, getNewRoomData, isInRoom, getCurrentRoom, isValidRoomID, roomExists } from "./utilities/utilities.mjs";
 
 import { questions } from "./utilities/questions.mjs";
 
@@ -183,6 +183,7 @@ ansp.on('connection', (socket) => {
                 status: "waiting", // "waiting" | "ready",
                 members: members, // // { name: string, image: string }[],
                 currentQuestion: null, 
+                questionNum: null
             };
 
             // avoid overhead of redis type, centralize data as string
@@ -203,6 +204,8 @@ ansp.on('connection', (socket) => {
     // response to client emitWithAck
     socket.on("action:join-room", async (roomID) => {
         const rooms = ansp.adapter.rooms;
+        const members = getRoomMembers(ansp, roomID);
+
 
         // if recieved non string or non 6 digit string
         if  (typeof roomID !== "string" || (!roomID.match(/^\d{6}$/) && roomID !== "pool")) {
@@ -213,6 +216,10 @@ ansp.on('connection', (socket) => {
         else if (roomID !== "pool" && rooms.get(roomID) === undefined || rooms.get(roomID) === null){
             ackError(ansp, socket.sessionID, "ack:join-room", "Room doesn't exist.");
         }
+
+        else if (roomID.match(/^\d{6}$/) && members?.length >= 4) {
+            ackError(ansp, socket.sessionID, "ack:join-room", "Room is full.");
+        } 
         
         // create room, store user information in map 
         else {  
@@ -267,13 +274,14 @@ ansp.on('connection', (socket) => {
         
         const members = getRoomMembers(ansp, roomID);
 
-        // form questions from aggregate file with with no repetition
+        // tested ✅, form questions from aggregate file with with no repetition
         const questionSet = new Set();
-        const length = 3;
-        let idx = Math.floor(Math.random() * questions.length);
-        while (!questionSet.has(questions[idx]) && questionSet.size < length) {
-            questionSet.add(questions[idx]);
-            idx = Math.floor(Math.random() * questions.length);
+        const len = 3;
+        while (questionSet.size < len) {
+            let idx = Math.floor(Math.random() * questions.length);
+            if (!questionSet.has(questions[idx])) {
+                questionSet.add(questions[idx]);
+            }
         }
         const newQuestions = Array.from(questionSet);
         
@@ -295,7 +303,7 @@ ansp.on('connection', (socket) => {
         // each question needs an object like the above
         // QuestionAnswerType[]
         const userAnswers = new Array();
-        while (userAnswers.length !== length)
+        while (userAnswers.length !== len)
             userAnswers.push({...userAnswerTemplateObject});
 
         // managed by and secure to socket server
@@ -319,7 +327,8 @@ ansp.on('connection', (socket) => {
             admin: newServerRoomData.admin, 
             status: newServerRoomData.status, 
             members: newServerRoomData.members,
-            currentQuestion: newServerRoomData.currentQuestion
+            currentQuestion: newServerRoomData.currentQuestion,
+            questionNum: newServerRoomData.questionNum
         };
 
         console.log("\n\n\n\n\nNEW ANSWER DATA:", userAnswers)
@@ -381,10 +390,9 @@ ansp.on('connection', (socket) => {
             admin: roomData.admin, 
             status: roomData.status, 
             members: roomData.members,
-            currentQuestion: roomData.currentQuestion
-        };
-
-        // have all answers been completed?
+            currentQuestion: roomData.currentQuestion,
+            questionNum: roomData.questionNum
+        }
 
         // write to redis
         const newRoomDataString = JSON.stringify(roomData);
@@ -397,15 +405,34 @@ ansp.on('connection', (socket) => {
             });
         }
         else {
-            ansp.to(room).emit("ack:start-match", {
+            ansp.to(room).emit("ack:answer-question", {
                 data: newRoomData,
                 status: "ok"
             });
         }
+        console.log("New room answers:", roomData); 
+    });
 
-        console.log("New room answers:", roomData);
-        
-    })  
+    socket.on("action:send-message", (roomID, message) => {
+        if (!isValidRoomID(roomID)) return ackError(ansp, socket.id, "ack:send-message", "Room ID is invalid.");
+        else if (!roomExists(ansp, roomID)) return ackError(ansp, socket.id, "ack:send-message", "Room does not exist.");
+        else if (!isInRoom(ansp, socket, roomID)) return ackError(ansp, socket.id, "ack:send-message", "Client not a member of room.");
+ 
+        const data = socket?.handshake?.auth?.data?.user;
+
+        // emit to other clients in room 
+        ansp.to(roomID).emit("ack:send-message", {
+            data: {
+                message: message,
+                sender: {
+                    id: socket.id,
+                    name: data?.name || "Anonymous",
+                    image: data?.image || "http://placeholder.co/500/500"
+                }
+            },
+            status: "ok"
+        });
+    });
 
 });
 

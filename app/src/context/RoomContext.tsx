@@ -1,7 +1,7 @@
 import { createContext, useEffect, useState, useRef, useMemo } from "react";
 
 import useSocketContext from "@/hooks/useSocketContext";
-import { AckType } from "./SocketContext";
+import { AckType, MessageData } from "./SocketContext";
 import { useRouter } from "next/router";
 
 export type RoomIDType = string | null | undefined;
@@ -43,6 +43,7 @@ export type RoomDataType = {
     status: "waiting" | "ready",
     members: UserData[] | [],
     currentQuestion: QuestionType | null, 
+    questionNum: number
 } | null;
 
 export type RoomContextType = { 
@@ -50,9 +51,11 @@ export type RoomContextType = {
     roomID: RoomIDType;
     roomData: RoomDataType;
     isAdmin: boolean | null | undefined;
+    messages: MessageData[] | null;
     createRoom: CallableFunction | null;
     leaveRoom: CallableFunction | null;
     joinRoom: CallableFunction | null;
+    sendMessage: CallableFunction | null;
 };
 
 // code meant to be ran on client machine (hence use effect, etc)
@@ -61,9 +64,11 @@ export const RoomContext = createContext<RoomContextType>({
     roomID: null,
     roomData: null,
     isAdmin: null,
+    messages: null,
     createRoom: null,
     leaveRoom: null,
-    joinRoom: null
+    joinRoom: null,
+    sendMessage: null
 });
 
 export const RoomProvider = ({children}: {
@@ -74,6 +79,7 @@ export const RoomProvider = ({children}: {
     const [ roomData, setRoomData ] = useState<RoomDataType>(null);
     const [ errors, setErrors ] = useState<string | null | undefined>(null);
     const [ isAdmin, setIsAdmin ] = useState<boolean | null | undefined>(null);
+    const [ messages, setMessages ] = useState<MessageData[]>([]);
     const { socket, connectionStatus } = useSocketContext();
     const router = useRouter();
 
@@ -84,14 +90,27 @@ export const RoomProvider = ({children}: {
     const leaveRoom = async (room: string | null = null) => {
         if (room) socket?.emit("action:leave-room", room);
         if (roomID) socket?.emit("action:leave-room", roomID);
+        setMessages([]);
     }
 
     const joinRoom = async (room: string) => { socket?.emit("action:join-room", room); }
+
+    const sendMessage = (message: string | null) => {
+        socket?.emit("action:send-message", roomData?.roomID, message ?? "");
+    }
+
+    const handleRecieveMessage = (ack: AckType) => {
+        if (ack.status === "ok") {
+            console.log(ack.data)
+            setMessages((prev) => [...prev, ack.data])
+        }
+    }
 
     const resetRoomContext = () => {
         setRoomID(null);
         setRoomData(null);
         setIsAdmin(null);
+        setMessages([]);
     }
 
     const handleMatchStart = async (ack: AckType) => {
@@ -102,14 +121,13 @@ export const RoomProvider = ({children}: {
     }
 
     const handleAnswerQuestion = async (ack: AckType) => {
-        if (ack.status === "ok") {
+        if (ack.status === "ok") 
             setRoomData(ack?.data);
-        }
     }
-
+ 
     const handleMatchOver = async (ack: AckType) => {
         if (ack.status === "ok") {
-            await router.push(`/rooms/foo`);
+            await router.push(`/rooms`);
             setRoomData(ack?.data);
         }
     }
@@ -156,14 +174,16 @@ export const RoomProvider = ({children}: {
             socket.on("ack:start-match", handleMatchStart); // mutates room data
             socket.on("ack:answer-question", handleAnswerQuestion);
             socket.on("ack:finish-match", handleMatchOver);
+            socket.on("ack:send-message", handleRecieveMessage);
             return () => {
                 socket.off("ack:new-room", handleEnterRoom);
                 socket.off("ack:left-room", handleLeaveRoom);
                 socket.off("ack:join-room", handleEnterRoom);
                 socket.off("update:room-count", handleRoomUpdate);
                 socket.off("ack:start-match", handleMatchStart); // mutates room data
-                socket.on("ack:answer-question", handleAnswerQuestion);
+                socket.off("ack:answer-question", handleAnswerQuestion);
                 socket.off("ack:finish-match", handleMatchOver);
+                socket.off("ack:send-message", handleRecieveMessage);
             };
         } 
     }, [socket]);
@@ -185,7 +205,7 @@ export const RoomProvider = ({children}: {
     }, [roomData])
 
     return (
-        <RoomContext.Provider value={{ errors, roomID, roomData, isAdmin, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom }}>
+        <RoomContext.Provider value={{ errors, roomID, roomData, isAdmin, messages, createRoom: createRoom, leaveRoom: leaveRoom, joinRoom: joinRoom, sendMessage: sendMessage }}>
             {children}
         </RoomContext.Provider>
     );
