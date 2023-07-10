@@ -9,6 +9,9 @@ import "@/styles/globals.css";
 import { SocketProvider } from "@/context/SocketContext"
 import { RoomProvider } from "@/context/RoomContext";
 
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
   pageProps: { session, ...pageProps },
@@ -19,6 +22,7 @@ const MyApp: AppType<{ session: Session | null }> = ({
         <NavLayout>
           <RoomProvider>
             <Component {...pageProps} />
+            <ToastContainer />
           </RoomProvider>
         </NavLayout>
     </SocketProvider>

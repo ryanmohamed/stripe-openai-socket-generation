@@ -5,13 +5,21 @@ import { useRouter } from "next/router";
 import useRoomContext from "@/hooks/useRoomContext";
 import MemberLink from "@/components/server/MemberLink";
 import { UserData } from "@/context/SocketContext";
-import { useEffect, Key, MouseEventHandler, FormEventHandler } from "react";
+import { useEffect, Key, MouseEventHandler, FormEventHandler, useState } from "react";
 import Question from "@/components/client/Question";
 import Chatroom from "@/components/client/Chatroom";
+import QuestionStatus from "@/components/client/QuestionStatus";
+import SpinnerIcon from "@/components/svg/SpinnerIcon";
+import MessageBubble from "@/components/svg/MessageBubble";
+import ChatroomBubble from "@/components/client/ChatroomBubble";
+import ImageGeneration from "@/components/server/ImageGeneration";
+import MatchResultsWireframe from "@/components/wireframes/MatchResultsWireframe";
+import MatchResults from "@/components/server/MatchResults";
 
 const Room: NextPage = () => {
   // redirect users without a session
   const router = useRouter();
+  const [ show, setShow ] = useState<boolean>(false);
   const { roomData, leaveRoom, sendMessage } = useRoomContext();
   const { data: session, status } = useSession({
     required: true,
@@ -23,6 +31,7 @@ const Room: NextPage = () => {
   const handleLeave: MouseEventHandler = (event) => {
     event.preventDefault();
     leaveRoom && leaveRoom();
+    router.push("/rooms");
   }
 
   useEffect(() => {
@@ -46,33 +55,98 @@ const Room: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="page md:screen-h-wo-nav w-full md:grid grid-cols-12 grid-rows-3">
-        <div className="flex flex-col justify-between row-span-2 col-start-0 col-span-3 p-4 bg-black md:border-r-2 border-stone-800">
+      <main className="page md:screen-h-wo-nav w-full md:grid grid-cols-12">
+        <div className="h-full flex flex-col justify-between col-start-0 col-span-3 p-4 md:border-r-[1px] border-stone-800 bg-black">
           <div>
             <h1 className="font-bold">Room {router.query.roomID}</h1>
             <p className="">Status: <span className="font-bold underline capitalize">{roomData?.status}</span></p>
-            <ul className="mt-6 list-none">
-              <p className="mb-4 border-b-2 border-stone-800 text-green-700 font-bold">Room Members</p>
-              <div className="flex md:flex-col">
-                { roomData?.members && roomData.members?.map((member: UserData, key: Key) => (
-                    <li><MemberLink key={key} name={member.name} src={member.image} /></li>
-                ))}
+            
+            <div className="flex md:flex-col items-center justify-between md:items-start">
+              <ul className="mt-6 list-none flex-grow mr-6 md:mr-0 md:w-full">
+                <p className="mb-4 border-b-2 border-stone-800 text-green-700 font-bold">Room Members</p>
+                <div className="flex md:flex-col">
+                  { roomData?.members && roomData.members?.map((member: UserData, key: Key) => (
+                      <li key={key}><MemberLink key={key} name={member.name} src={member.image} /></li>
+                  ))}
+                </div>
+              </ul>
+              <button onClick={()=>setShow(!show)} className="md:mt-6 h-10 w-10 centered flex-col rounded-full overflow-hidden ring-2 ring-blue-700 bg-gradient-to-br from-stone-900 to-black transition hover:cursor-pointer hover:ring-blue-400">
+                  <MessageBubble className="stroke-gray-200 stroke-[3px] h-2/5 w-2/5" fill=""/>
+              </button>
+            </div>
+
+
+          </div>
+          <div className="mt-6 flex flex-col items-end w-full self-end">
+            <button className="mt-4 btn h-8 w-full centered text-sm font-barlow flex-grow-0 md:flex-grow" onClick={handleLeave}>Leave room</button>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-10 min-screen-h overflow-x-hidden md:no-scrollbar col-start-4 col-span-9 bg-gradient-to-tl from-[#110911] to-stone-950">
+          
+          <h1 className="text-green-800 pb-2 mb-6 font-poppins font-bold tracking-wide text-5xl border-b-[1px] border-stone-800 w-fit">Match Arena</h1>
+
+
+          <section className="w-full flex items-center justify-between relative border-b-[1px] border-stone-800 py-10 mb-2 md:px-10">
+              <div className="w-1/2">
+                  <h2 className="text-gray-300 font-poppins font-semibold text-4xl tracking-wide">Chatroom</h2>   
+                  <p className="mt-2 text-stone-400 tracking-wide w-full">Use the chatroom to communicate with your room members.</p>
               </div>
-            </ul>
-          </div>
-          <div className="mt-6 flex max-w-[40%] md:max-w-full md:w-full self-end">
-            <button className="btn h-8 centered text-sm font-barlow flex-grow-0 md:flex-grow" onClick={handleLeave}>Leave room</button>
-          </div>
+              <button onClick={()=>setShow(!show)} className="h-14 w-14 centered flex-col rounded-full overflow-hidden ring-2 ring-blue-700 bg-gradient-to-br from-stone-900 to-black transition hover:cursor-pointer hover:ring-blue-400">
+                  <MessageBubble className="stroke-gray-200 stroke-[3px] h-2/5 w-2/5" fill=""/>
+              </button>
+          </section>
+
+          <section className="w-full flex flex-col sm:flex-row items-center justify-between gap-10 relative border-b-[1px] border-stone-800 py-10 mb-2 md:px-10">
+            <div className="">
+                <h2 className="text-gray-300 font-poppins font-semibold text-4xl tracking-wide">Answer questions</h2>   
+                <p className="mt-2 text-stone-400 tracking-wide w-full">Answer a series of AI generated prompts based on your vision of an ideal pet.</p>
+            </div>
+            <div className="">
+                <h2 className="text-gray-300 font-poppins font-semibold text-4xl tracking-wide">Generate and discover</h2>   
+                <p className="mt-2 text-stone-400 tracking-wide w-full">Generate an image based on your groups answers for an idea of life with your ideal pet. Find local animals up for adoptions that match.</p>
+            </div>
+          </section>
+
+          {/* show current quesiton is status incomplete */}
+          { roomData?.status !== "complete" && <>{ roomData?.currentQuestion && <Question num={roomData?.questionNum+1} question={roomData?.currentQuestion}/> }</> }
+          {/* show spinner is complete but no result yet */}
+
+          { roomData?.status === "complete" && <>
+
+              <div className="flex flex-col justify-evenly items-center md:px-10 pb-10 mb-10 border-b-[1px] border-stone-800">
+                <div className="mt-10 w-full">
+                  <h2 className="text-gray-300 font-poppins font-semibold text-4xl tracking-wide">Match Results</h2>   
+                  <p className="mt-2 text-stone-400 tracking-wide w-full">Find an explanation of the image generated for your groups answers, below.</p>
+                </div>
+                <MatchResults results={roomData?.result} members={roomData.members}/>
+              </div>
+          
+            </>
+          }
+
+          { (roomData?.status === "complete" && roomData.result) && <>
+              <section className="w-full flex flex-col sm:flex-row items-center justify-between gap-10 relative border-b-[1px] border-stone-800 pb-10 md:px-10">
+                <div className="">
+                  <h2 className="text-gray-300 font-poppins font-semibold text-4xl tracking-wide">Local Adoptions</h2>   
+                  <p className="mt-2 text-stone-400 tracking-wide w-full">Click the button below to provide your location and we'll find pets in your area waiting to be adopted.</p>
+                  <button className="btn mt-2 bg-green-700 hover:bg-green-500" onClick={(e) => { navigator.geolocation.getCurrentPosition(()=>{},()=>{})}}>Provide location</button>
+                </div>
+              </section>
+            </>
+          }
+
         </div>
 
-        <div className="col-start-4 col-span-9 row-span-2 p-10 py-20 md:py-10 h-auto centered">
-          { roomData?.currentQuestion && <Question num={roomData?.questionNum+1} question={roomData?.currentQuestion}/> }
+        <ChatroomBubble show={show} setShow={setShow} className="h-14 w-14" />
+
+
+        {/* <div className="p-2 col-start-9 col-span-4 h-[15vh] md:h-full bg-black border-t-2 border-stone-800">
+          <QuestionStatus />
         </div>
-
-        <div className="col-start-9 col-span-4 row-start-3 h-[15vh] md:h-full bg-black border-t-2 border-stone-800"></div>
-
-        <Chatroom />
         
+
+        <Chatroom /> */}
       </main>
     </>
   );

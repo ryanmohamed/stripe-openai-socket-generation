@@ -126,3 +126,13 @@ yarn-error.log*
 
 # typescript
 /server/*.tsbuildinfo
+
+
+.rest
+/server/.rest
+/client/.rest
+dumb.rdb
+chatcompletions.js
+/.rest
+/dumb.rdb
+/chatcompletions.js

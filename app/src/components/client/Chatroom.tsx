@@ -13,7 +13,7 @@ const Message = ({ message, image, className }: {
     return (
         <li className={className}>
             <img className="w-10 h-10 rounded-full" src={image} alt="user image" />
-            <p className="mx-2 box-border bg-inherit min-h-[1.5rem] p-2 centered text-sm font-barlow rounded-2xl">{message}</p>
+            <p className="mx-2 min-w-[50px] box-border bg-inherit min-h-[1.5rem] p-2 centered text-sm font-barlow rounded-md">{message}</p>
         </li>
     );
 }
@@ -36,8 +36,9 @@ const Chatroom = () => {
         }, 25);
     }
     return (
-        <div className="col-span-8 row-start-3 flex flex-col justify-between align-center h-[80vh] md:h-full bg-black border-t-2 md:border-r-2 border-stone-800">
-            <div className="p-4 max-h-full scroll-smooth msg-scroll no-scrollbar">
+        <div className="h-full flex flex-col justify-between align-center box-border">
+            
+            <div className="p-4 overflow-scroll-y scroll-smooth msg-scroll no-scrollbar ">
                 <ul className="flex flex-col w-full">
                     { messages?.map((msg: MessageData) => (
                         <Message 
@@ -50,11 +51,13 @@ const Chatroom = () => {
                 </ul>
             </div>
             
-            <div className="py-4 centered">
-                <form onSubmit={handleSendMessage} className="self-end flex-grow centered px-10">
-                    <img className="w-10 h-10 rounded-full" src={session?.user?.image || "http://placeholder.co/500/500"} alt="user img" />
-                    <input ref={ref} className="mx-4 flex-grow p-2 h-12 outline-none border-b-2 border-stone-800 bg-transparent font-poppins text-stone-300 transition" type="text" placeholder="Send a message..." />
-                    <button className="h-10 p-3 centered rounded-lg font-bold text-stone-300 subpixel-antialiased bg-green-700 hover:bg-green-500 transition">Send</button>
+            <div className="centered border-t-[1px] border-stone-200 bg-stone-200">
+                <form onSubmit={handleSendMessage} className="self-end flex-grow flex-col p-2">
+                    <div className="flex flex-row-reverse items-center justify-between w-full">
+                        <img className="w-6 h-6 md:h-10 md:w-10 rounded-full" src={session?.user?.image || "http://placeholder.co/500/500"} alt="user img" />
+                        <input ref={ref} className="mr-2 bg-white shadow-md shadow-stone-300 rounded-2xl flex-grow px-2 h-10 w-full outline-none font-barlow text-stone-800 transition hover:shadow-stone-400 cursor-pointer" type="text" placeholder="Send a message..." />
+                    </div>
+                    <button className="h-10 w-full mt-2 p-3 centered rounded-2xl font-bold text-stone-300 tracking-wide subpixel-antialiased bg-blue-700 hover:bg-blue-500 transition">Send</button>
                 </form>
             </div>
         </div>

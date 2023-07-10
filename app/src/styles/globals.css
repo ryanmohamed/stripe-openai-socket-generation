@@ -107,6 +107,9 @@
     .screen-h-wo-nav {
       height: calc(100vh - 48px);
     }
+    .min-screen-h {
+      min-height: calc(100vh - 48px);
+    }
     .msg-scroll {
       white-space:nowrap;
       overflow: scroll;

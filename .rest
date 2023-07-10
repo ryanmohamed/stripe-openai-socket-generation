@@ -1,3 +1,9 @@
+ GET https://api.windy.com/api/webcams/v2/list/country=FR/category=beach/orderby=popularity/limit=8?show=webcams:player&key=eJWquapVRSvlR0d975rCjvQV5d5f0uCT HTTP/1.1
+
+{
+    
+}
+
 GET http://localhost:3001/api?room=976174 HTTP/1.1
 content-type: application/json
 Authorization: Bearer xxx

@@ -23,16 +23,24 @@ export type UserData = {
     image: string;
 }
 
+export type ResultType = {
+    explanation: string;
+    prompt: string;
+    data: any
+}
+
 type RoomId = string;
 type CountType = number;
 
 export type RoomData = {
     roomID: RoomId,
     admin: string | null,
-    status: "waiting" | "ready",
+    status: "waiting" | "ready" | "complete",
     members: UserData[],
     currentQuestion: any, // todo
-    questionNum?: number
+    questionNum?: number,
+    userCurrentAnswerStatuses: Record<string, boolean>,
+    result: ResultType | null | undefined
 }
 
 export type RoomCountUpdate = {
@@ -67,6 +75,8 @@ interface ServerToClientEvents {
     "ack:start-match": (ack: AckType) => void;
     "ack:answer-question": (ack: AckType) => void;
     "ack:finish-match": (ack: AckType) => void;
+
+    "ack:match-complete": (ack: AckType) => void;
 
     "ack:send-message": (ack: AckType) => void;
 }

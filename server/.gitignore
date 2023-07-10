@@ -1,3 +1,141 @@
 node_modules
 # Keep environment variables out of version control
 .env
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# database
+/prisma/db.sqlite
+/prisma/db.sqlite-journal
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+
+
+# dependencies
+/app/node_modules
+/app/.pnp
+/app.pnp.js
+
+# testing
+/app/coverage
+
+# database
+/app/prisma/db.sqlite
+/app/prisma/db.sqlite-journal
+
+# next.js
+/app/.next/
+/app/out/
+/app/next-env.d.ts
+
+# production
+/app/build
+
+# misc
+/app/.DS_Store
+/app/*.pem
+
+# debug
+/app/npm-debug.log*
+/app/yarn-debug.log*
+/app/yarn-error.log*
+/app/.pnpm-debug.log*
+
+# local env files
+# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+/app/.env
+/app/.env*.local
+
+# vercel
+/app/.vercel
+
+# typescript
+/app/*.tsbuildinfo
+
+
+
+# dependencies
+/server/node_modules
+/server/.pnp
+/server/.pnp.js
+
+# testing
+/server/coverage
+
+# database
+/server/prisma/db.sqlite
+/server/prisma/db.sqlite-journal
+
+# next.js
+/server/.next/
+/server/out/
+/server/next-env.d.ts
+
+# production
+/server/build
+
+# misc
+/server/.DS_Store
+/server/*.pem
+
+# debug
+/server/npm-debug.log*
+/server/yarn-debug.log*
+/server/yarn-error.log*
+/server/.pnpm-debug.log*
+
+# local env files
+# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+/server/.env
+/server/.env*.local
+
+# vercel
+/server/.vercel
+
+# typescript
+/server/*.tsbuildinfo
+
+
+.rest
+/server/.rest
+/client/.rest
+dumb.rdb
+chatcompletions.js
+/.rest
+/git dumb.rdb
+/chatcompletions.js

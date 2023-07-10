@@ -43,6 +43,18 @@ redisClient.on('error', () => {
     console.log("Error connecting to Redis.\n\n");
 })
 
+
+
+/* OPEN AI (TODO: MOVE TO CONFIG) */
+import { Configuration, OpenAIApi } from "openai";
+
+const configuration = new Configuration({
+    organization: process.env.OPEN_AI_ORG,
+    apiKey: process.env.OPEN_AI_KEY
+});
+
+const openai = new OpenAIApi(configuration);
+
 import { ackError, coreServices, emitConnectionCount, generateRoomId, handlePoolUpdate, getRoomMembers, handleMemberCountChange, leaveAllRooms, getNewRoomData, isInRoom, getCurrentRoom, isValidRoomID, roomExists } from "./utilities/utilities.mjs";
 
 import { questions } from "./utilities/questions.mjs";
@@ -51,8 +63,9 @@ const pnsp = io.of('/');
 const ansp = io.of('/authenticated');
 
 // api middleware
+/* TODO: parse token provided by requester */
 app.use(async (req, res, next) => {
-    console.log("\n\n\n\n\nREST API\n\n\n\n");
+    //console.log("\n\n\n\n\nREST API\n\n\n\n");
     const sessionToken = req.headers["x-session-token-cookie"];
     const serverToken = req.headers.authorization?.split(" ")[1];
     if (serverToken === undefined || serverToken === null) return res.status(401).json({ error: "Missing token." });
@@ -76,13 +89,11 @@ app.use(async (req, res, next) => {
 
     if(roomData?.status !== "ready") return res.status(403).json({ error: "Room match hasn't started."});
 
-
     next();
 });
 
 // api routes
 app.get("/api", (req, res) => {
-    console.log("\n\n\n\n headers", req.headers);
     return res.status(200).json({ message: "hey there" });
 });
 
@@ -107,6 +118,7 @@ ansp.use((socket, next) => {
     console.log(`\n\n\n\nSocket ${socket.id} attempting to connect to authenticated namespace...`)
     // full-stack app appends cookies to client requests
     const cookies = socket.request.headers?.cookie?.split('; ');
+    if (!cookies) return next(new Error("Did not find any cookies."))
     const sessionTokenCookie = cookies.find(cookie => cookie.startsWith('next-auth.session-token='));
     if (!sessionTokenCookie) return next(new Error("No session token cookie found."));
     const sessionToken = sessionTokenCookie.split("=")[1];
@@ -140,6 +152,7 @@ ansp.use((socket, next) => {
 ansp.on('connection', (socket) => {
     const emitTotalConnections = () => emitConnectionCount([pnsp, ansp], ansp);
     coreServices(emitTotalConnections, socket);
+
     console.log(`\n\nNew private connection: ${socket.id}!\n\n`);
     socket.join(socket.sessionID); // gurantee of addition is made by middleware
 
@@ -276,7 +289,7 @@ ansp.on('connection', (socket) => {
 
         // tested ✅, form questions from aggregate file with with no repetition
         const questionSet = new Set();
-        const len = 3;
+        const len = 2;
         while (questionSet.size < len) {
             let idx = Math.floor(Math.random() * questions.length);
             if (!questionSet.has(questions[idx])) {
@@ -328,8 +341,11 @@ ansp.on('connection', (socket) => {
             status: newServerRoomData.status, 
             members: newServerRoomData.members,
             currentQuestion: newServerRoomData.currentQuestion,
-            questionNum: newServerRoomData.questionNum
+            questionNum: newServerRoomData.questionNum,
+            userCurrentAnswerStatuses: userAnswers[0] // valid to send this data since it's just null for each user answer
         };
+
+        console.log(userAnswers[0]);
 
         console.log("\n\n\n\n\nNEW ANSWER DATA:", userAnswers)
 
@@ -345,12 +361,13 @@ ansp.on('connection', (socket) => {
 
     // when answering a question, nothing should be provided by the client but the answer (assuming a hacker tries to use socket in dev tools, similar thought process in above code as well)
     socket.on("action:answer-question", async (answer) => {
+
         // what room is the socket in? 
         const room = getCurrentRoom(socket);
         if(room === null || room === undefined) return ackError(ansp, socket.sessionID, "ack:answer-question", "User is not in any applicable rooms.");
         else if (!isInRoom(ansp, socket, room)) return ackError(ansp, socket.sessionID, "ack:answer-question", "Server did not find user in room.");
         
-        // get the room data, validate the data to be mutated is as expected
+        // get the room data, validate the data to be mutated as expected
         const roomDataString = await redisClient.get(room);
         const roomData = JSON.parse(roomDataString || "null");
         if (roomData === null || roomData === undefined) return ackError(ansp, socket.sessionID, "ack:answer-question", "Server could not find the room.");
@@ -358,9 +375,11 @@ ansp.on('connection', (socket) => {
         if (roomData?.currentQuestion === null || roomData?.currentQuestion === undefined) return ackError(ansp, socket.sessionID, "ack:answer-question", "Room has no current question.");
       
         const idx = roomData?.questionNum;
-        const answers = roomData?.answers
-        if (idx === null || idx === undefined) return ackError(ansp, socket.sessionID, "ack:answer-question", "Room has no current question.");
+        const answers = roomData?.answers;
         if (answers === null || answers === undefined) return ackError(ansp, socket.sessionID, "ack:answer-question", "Room has no trackable answers.");
+       
+        // get the current answer object
+        // keys are usernames, values are their answer
         const currentAnswersObj = roomData.answers[idx];
         if (currentAnswersObj === null || currentAnswersObj === undefined) return ackError(ansp, socket.sessionID, "ack:answer-question", "Server could not make changes for this question.");
 
@@ -371,7 +390,7 @@ ansp.on('connection', (socket) => {
         // push user answers to current question, insert into aggregate
         currentAnswersObj[socket?.sessionID] = answer;
 
-        // has everyone answered?
+        // has everyone answered? update game state accordingly
         let nextQuestion = true;
         for (let userID in currentAnswersObj) {
             if (currentAnswersObj[userID] === null || currentAnswersObj[userID] === undefined){
@@ -383,15 +402,25 @@ ansp.on('connection', (socket) => {
         newRoomAnswers[idx] = currentAnswersObj;
         roomData.answers = newRoomAnswers;
         roomData.questionNum += nextQuestion ? 1 : 0;
-        roomData.currentQuestion = roomData?.questions[roomData.questionNum]
+        roomData.currentQuestion = roomData?.questions[roomData.questionNum];
 
+        // while we want to update other users of their fellow user status' 
+        // we don't want to send their actual values, simply send a standalone attribute for each users current answer question status
+        // likewise we want to conditionally send this
+        let userCurrentAnswerStatuses = {};
+        for (let userID in currentAnswersObj){
+            const userAnswer = currentAnswersObj[userID];
+            userCurrentAnswerStatuses[userID] = (nextQuestion || !userAnswer) ? false : true;
+        }
+        
         const newRoomData = {
             roomID: roomData.roomID,
             admin: roomData.admin, 
             status: roomData.status, 
             members: roomData.members,
             currentQuestion: roomData.currentQuestion,
-            questionNum: roomData.questionNum
+            questionNum: roomData.questionNum,
+            userCurrentAnswerStatuses: userCurrentAnswerStatuses
         }
 
         // write to redis
@@ -399,10 +428,155 @@ ansp.on('connection', (socket) => {
         const status = await redisClient.set(room, newRoomDataString);
         if (!status) return ackError(ansp, socket.sessionID, "ack:answer-question", "Error occured updating room.");
         if(roomData?.questionNum === roomData?.questions.length) {
+            newRoomData.status = "complete";
             ansp.to(room).emit("ack:finish-match", {
                 data: newRoomData,
                 status: "ok"
             });
+
+            // console.log(roomData)
+            // const foo = "Question 1\nprompt: \"You come home to this, what do you do first?\"\nimage description: \"image dog destroys something after being left home home\"\noptions: \"'Burst into rage 🤬\", \"Join in 😁\", \"'Calm Discipline 🥺'\", \"Go for a walk 🦮\"\n\nAnswers for Question 1:\n\"Join in 😁\", \"Join in 😁\", \"Calm Discipline 🥺'\""
+           
+            let formatted = "";
+            const questions = roomData.questions;
+            questions?.forEach((question, index) => {
+                const prompt = question?.prompt;
+                const image = question?.image;
+
+                const type = question?.info?.type;
+                const options = question?.info?.options;
+                let optionString = type === "short" ? "SHORT ANSWER" : "";
+                options?.forEach((option, index) => { 
+                    optionString += `\"${option}\", `;
+                })
+
+                let answerString = "";
+                const currentAnswers = Object.values(roomData?.answers[index]);
+                currentAnswers.forEach((ans, index) => {
+                    answerString += `\"${ans}\", `;
+                })
+
+                formatted += `Question ${index+1}\nprompt: \"${prompt}\"\nimage description: \"${image?.alt || ""}\"\noptions: \"${optionString}\n\nAnswers for Question ${index+1}:\n${answerString}\n\n`
+                console.log(formatted)
+            })
+
+            // const response = await openai.createChatCompletion({
+            //     model: "gpt-3.5-turbo",
+            //     messages: [
+            //       {
+            //         "role": "system",
+            //         "content": "You are an image prompt generator. You are responsible for turning an array of question and answer combos into a single prompt that will generate an image when used with Dalle-2. Multiple users pair together to answer questions about pets and your job is to interpret their answers to each question and determine the best pet. With that being said once you find the best pet, you then craft the perfect prompt. "
+            //       },
+            //       {
+            //         "role": "user",
+            //         "content": "Question 1\nprompt: \"You come home to this, what do you do first?\"\nimage description: \"image dog destroys something after being left home home\"\noptions: \"'Burst into rage 🤬\", \"Join in 😁\", \"'Calm Discipline 🥺'\", \"Go for a walk 🦮\"\n\nAnswers for Question 1:\n\"Join in 😁\", \"Join in 😁\", \"Calm Discipline 🥺'\""
+            //       },
+            //       {
+            //         "role": "assistant",
+            //         "content": "The users seem to be tolerant of undesired behavior in their pets, this can be a double edged sword but leans towards the positive side. Their pet would probably not get scared of making mistakes, making it easier to rectify the behavior itself. For a balanced experience  I recommend a pet with medium energy like the English bull dog.\n\nMY PROMPT IS: An english bull dog running across a grass field, afternoon suburban lighting."
+            //       },
+            //       {
+            //         "role": "user",
+            //         "content": "Question 1\nprompt: \"You come home to this, what do you do first?\"\nimage description: \"image dog destroys something after being left home home\"\noptions: \"'Burst into rage 🤬\", \"Join in 😁\", \"'Calm Discipline 🥺'\", \"Go for a walk 🦮\"\n\nAnswers for Question 1:\n\"Go for a walk 🦮\", \"Go for a walk 🦮\", \"Calm Discipline 🥺'\"\n\nQuestion 2\nprompt: \"Your pet enjoys a day at the?\"\nimage description: \"image of a dog park\"\noptions: \"Beach\", \"Living Room\", \"'Park'\", \"Office\"\n\nAnswers for Question 2:\n\"Beach\", \"Beach\", \"Office\""
+            //       },
+            //       {
+            //         "role": "assistant",
+            //         "content": "The users seem to be responsible and loving pet owners. They know how to release a dog's pent up aggression in positive ways so having a high energy dog like a Border Collie or Australian Shepard. may be the best. The answers to the next question shows that a majority of the members have an ideal pet who likes spending time at the beach. However one member does mention the office so it can be assumed they may spend some time at work. A great recommendation considering the above is a medium energy dog like the Shiba Inu. \n\nMY PROMPT IS: Shiba Inu running down the shore on a lovely beach."
+            //       },
+            //       {
+            //         "role": "user",
+            //         "content": "Question 1\nprompt: \"You would name your pet...\"\nimage description: \"image dog destroys something after being left home home\"\noptions: SHORT ANSWER\n\nAnswers for Question 1:\n\"Fluffy\", \"Ben\", \"Midnight'\"\n\nQuestion 2\nprompt: \"Your pet enjoys a day at the?\"\nimage description: \"image of a dog park\"\noptions: \"Beach\", \"Living Room\", \"'Park'\", \"Office\"\n\nAnswers for Question 2:\n\"Living Room\", \"Beach\", \"Office\"\n\nQuestion 3\nprompt: \"Are you allergic to pets?\"\nimage description: \"Sneezing person\"\noptions: \"Yes\", \"No\"\n\nAnswers for Question 3:\n\"No\", \"No\", \"No\""
+            //       },
+            //       {
+            //         "role": "assistant",
+            //         "content": "None of the members have allergies which is the highest priority when considering a new pet. The members also seem to prefer a stay at home pet due to the majority of answers to question 2, such as \"Living Room\" and \"Office\". A nice name that was given by the users in the short answer question 1 was \"Midnight\". All of the above makes me want to suggest the cuddly Bombay cat.\n\nMY PROMPT: A cute Bombay cat laying on a pizza box."
+            //       },
+            //       {
+            //         "role": "user",
+            //         "content": "Question 1\nprompt: \"You prefer...\"\nimage description: \"lizard on a desk\"\noptions: \"Reptiles\", \"Mammals\", \"Birds\", \"Something Cute\"\n\nAnswers for Question 1:\n\"Reptiles\", \"Birds\", \"Birds'\"\n\nQuestion 2\nprompt: \"Your pet enjoys a day at the?\"\nimage description: \"image of a dog park\"\noptions: \"Beach\", \"Living Room\", \"'Park'\", \"Office\"\n\nAnswers for Question 2:\n\"Living Room\", \"Living Room\", \"Living Room\"\n\nQuestion 3\nprompt: \"Are you allergic to pets?\"\nimage description: \"Sneezing person\"\noptions: \"Yes\", \"No\"\n\nAnswers for Question 3:\n\"No\", \"No\", \"No\""
+            //       },
+            //       {
+            //         "role": "assistant",
+            //         "content": "Based on the answers, it seems that the users have a preference for birds and enjoy having their pets in the living room. Since there are no allergies, a suitable pet recommendation would be a colorful and sociable pet bird, such as a parakeet or a cockatiel.\n\nMY PROMPT: An adorable and vibrant parakeet perched on a branch, surrounded by colorful feathers."
+            //       },
+            //       {
+            //         "role": "user",
+            //         "content": formatted
+            //       }
+            //     ],
+            //     temperature: 1,
+            //     max_tokens: 256,
+            //     top_p: 1,
+            //     frequency_penalty: 0,
+            //     presence_penalty: 0,
+            // });
+
+            // if(response.data.choices.length > 0){
+            //     const content = response.data.choices[0].message.content;
+            //     console.log(content)
+
+            //     const explanation = content.split("MY PROMPT: ")[0];
+            //     const prompt = content.split("MY PROMPT: ")[1];
+            //     newRoomData.result = {
+            //         explanation: explanation,
+            //         prompt: prompt,
+            //         data: null
+            //     }
+            //     ansp.to(room).emit("ack:finish-match", {
+            //         data: newRoomData,
+            //         status: "ok"
+            //     });
+
+            //     console.log(prompt);
+
+            //     const imageResponse = await openai.createImage({
+            //         prompt: prompt,
+            //         n: 1,
+            //         size: "256x256"
+            //     });
+            //     newRoomData.result.data = imageResponse.data;
+            //     ansp.to(room).emit("ack:finish-match", {
+            //         data: newRoomData,
+            //         status: "ok"
+            //     });
+
+            //     console.log(imageResponse.data)
+
+            // }
+
+            /* TESTS */
+            const testContent = "A majestic and calm-looking cat relaxing on a window sill, basking in the warm sunlight. A majestic and calm-looking cat relaxing on a window sill, basking in the warm sunlight."
+            const testImage = "https://oaidalleapiprodscus.blob.core.windows.net/private/org-ZdGIjlQ2976uh4fFXUDVI1UI/user-uMzdDyR77MjjhR3WuGDZzgUr/img-QtJMmmf24lAxtjRLyjt1Ejpa.png?st=2023-07-10T02%3A25%3A02Z&se=2023-07-10T04%3A25%3A02Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-07-09T22%3A17%3A21Z&ske=2023-07-10T22%3A17%3A21Z&sks=b&skv=2021-08-06&sig=5QHggitEFIdzAopsb1vGQZT4jTuCKjdW66WbVJYZv0U%3D";
+        
+            const explanation = testContent.split("MY PROMPT: ")[0];
+            const prompt = testContent.split("MY PROMPT: ")[1];
+
+            setTimeout(() => {
+                newRoomData.result = {
+                    explanation: explanation,
+                    prompt: prompt,
+                    data: null
+                }
+                ansp.to(room).emit("ack:finish-match", {
+                    data: newRoomData,
+                    status: "ok"
+                });
+            }, 5000);
+            setTimeout(() => {
+                newRoomData.result = {
+                    explanation: explanation,
+                    prompt: prompt,
+                    data: {
+                        data: [{
+                            url: testImage
+                        }]
+                    }
+                }
+                ansp.to(room).emit("ack:finish-match", {
+                    data: newRoomData,
+                    status: "ok"
+                });
+            }, 10000)
         }
         else {
             ansp.to(room).emit("ack:answer-question", {
@@ -410,7 +584,7 @@ ansp.on('connection', (socket) => {
                 status: "ok"
             });
         }
-        console.log("New room answers:", roomData); 
+        //console.log("New room answers:", roomData); 
     });
 
     socket.on("action:send-message", (roomID, message) => {
@@ -452,7 +626,7 @@ ansp.adapter.on("leave-room", async (room, id) => {
 
     const roomDataString = await redisClient.get(room);
     const roomDataJSON = JSON.parse(roomDataString || "null");
-    if(roomDataJSON)
+    // if(roomDataJSON)
 
     handleMemberCountChange(ansp, room, redisClient, id); // update room as well as the changer
 });

@@ -1,8 +1,9 @@
 import { createContext, useEffect, useState, useRef, useMemo } from "react";
 
 import useSocketContext from "@/hooks/useSocketContext";
-import { AckType, MessageData } from "./SocketContext";
+import { AckType, MessageData, ResultType } from "./SocketContext";
 import { useRouter } from "next/router";
+import { toast } from "react-toastify";
 
 export type RoomIDType = string | null | undefined;
 
@@ -40,10 +41,12 @@ export type QuestionType = {
 export type RoomDataType = {
     roomID: RoomIDType,
     admin: string | null,
-    status: "waiting" | "ready",
+    status: "waiting" | "ready" | "complete",
     members: UserData[] | [],
     currentQuestion: QuestionType | null, 
-    questionNum: number
+    questionNum: number,
+    userCurrentAnswerStatuses: Record<string, boolean>,
+    result: ResultType | null | undefined
 } | null;
 
 export type RoomContextType = { 
@@ -101,8 +104,9 @@ export const RoomProvider = ({children}: {
 
     const handleRecieveMessage = (ack: AckType) => {
         if (ack.status === "ok") {
-            console.log(ack.data)
-            setMessages((prev) => [...prev, ack.data])
+            console.log(ack.data);
+            setMessages((prev) => [...prev, ack.data]);
+            toast("New message in room chat!");
         }
     }
 
@@ -121,16 +125,27 @@ export const RoomProvider = ({children}: {
     }
 
     const handleAnswerQuestion = async (ack: AckType) => {
-        if (ack.status === "ok") 
+        if (ack.status === "ok") {
             setRoomData(ack?.data);
+            console.log(ack?.data)
+        }
     }
  
     const handleMatchOver = async (ack: AckType) => {
         if (ack.status === "ok") {
-            await router.push(`/rooms`);
+            //await router.push(`/rooms/${ack.data?.roomID}/result`);
             setRoomData(ack?.data);
         }
     }
+
+    const handleMatchComplete = async (ack: AckType) => {
+        if (ack.status === "ok") {
+            setRoomData(ack?.data)
+            console.log(ack.data)
+        }
+    }
+
+    
 
     useEffect(() => {
         resetRoomContext(); // on socket change
@@ -175,6 +190,7 @@ export const RoomProvider = ({children}: {
             socket.on("ack:answer-question", handleAnswerQuestion);
             socket.on("ack:finish-match", handleMatchOver);
             socket.on("ack:send-message", handleRecieveMessage);
+            socket.on("ack:match-complete", handleMatchComplete);
             return () => {
                 socket.off("ack:new-room", handleEnterRoom);
                 socket.off("ack:left-room", handleLeaveRoom);
@@ -184,6 +200,7 @@ export const RoomProvider = ({children}: {
                 socket.off("ack:answer-question", handleAnswerQuestion);
                 socket.off("ack:finish-match", handleMatchOver);
                 socket.off("ack:send-message", handleRecieveMessage);
+                socket.off("ack:match-complete", handleMatchComplete);
             };
         } 
     }, [socket]);
